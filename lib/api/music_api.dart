@@ -55,17 +55,15 @@ class MusicApi {
   static Future<List<dynamic>> getComments(int musicId) async {
     try {
       final response = await _dio.get(
-        '/music/comment/list',
-        queryParameters: {'musicId': musicId},
+        '/comment/list/$musicId',
         options: await _getAuthOptions(),
       );
 
       final resData = response.data;
       if (resData['code'] == '200' || resData['code'] == 200) {
         return resData['data'];
-      } else {
-        return [];
       }
+      return [];
     } catch (e) {
       debugPrint('获取评论失败: $e');
       return [];
@@ -75,16 +73,17 @@ class MusicApi {
   static Future<void> addComment(int musicId, String content) async {
     try {
       final response = await _dio.post(
-        '/music/comment/add',
+        '/comment/add',
         data: {'musicId': musicId, 'content': content},
         options: await _getAuthOptions(),
       );
+
       final resData = response.data;
       if (resData['code'] != '200' && resData['code'] != 200) {
         throw Exception(resData['msg'] ?? '发表失败');
       }
     } catch (e) {
-      throw Exception('发表失败：$e');
+      throw Exception('发表异常: $e');
     }
   }
 
