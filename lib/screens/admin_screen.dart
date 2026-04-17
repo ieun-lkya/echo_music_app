@@ -7,8 +7,8 @@ class AdminScreen extends StatelessWidget {
 
   Future<void> _logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('admin_token');
-    
+    await prefs.remove('echo_token');
+
     if (context.mounted) {
       context.go('/login');
     }
@@ -30,26 +30,16 @@ class AdminScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.admin_panel_settings,
-              size: 100,
-              color: Colors.blue,
-            ),
+            Icon(Icons.admin_panel_settings, size: 100, color: Colors.blue),
             SizedBox(height: 20),
             Text(
               '欢迎使用管理后台',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
             Text(
               '这里可以管理音乐、用户和推荐算法',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
           ],
         ),

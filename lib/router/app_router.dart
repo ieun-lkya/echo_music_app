@@ -11,7 +11,7 @@ final router = GoRouter(
 
     if (isGoingToAdmin) {
       final prefs = await SharedPreferences.getInstance();
-      final adminToken = prefs.getString('admin_token');
+      final adminToken = prefs.getString('echo_token');
 
       if (adminToken == null || adminToken.isEmpty) {
         return '/login';
