@@ -30,4 +30,19 @@ class UserApi {
       throw Exception('网络请求异常: ${e.message}');
     }
   }
+
+  static Future<void> register(String username, String password) async {
+    try {
+      final response = await _dio.post(
+        '/user/register',
+        data: {'username': username, 'password': password},
+      );
+      final resData = response.data;
+      if (resData['code'] != '200' && resData['code'] != 200) {
+        throw Exception(resData['msg'] ?? '注册失败，可能账号已存在');
+      }
+    } catch (e) {
+      throw Exception('网络请求异常: $e');
+    }
+  }
 }

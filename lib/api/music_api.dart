@@ -104,4 +104,48 @@ class MusicApi {
       throw Exception('AI 推荐失败：$e');
     }
   }
+
+  static Future<List<dynamic>> getPlaylists() async {
+    try {
+      final response = await _dio.get(
+        '/playlist/list',
+        options: await _getAuthOptions(),
+      );
+      final resData = response.data;
+      if (resData['code'] == '200' || resData['code'] == 200) {
+        return resData['data'];
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  static Future<void> createPlaylist(String name) async {
+    try {
+      await _dio.post(
+        '/playlist/create',
+        queryParameters: {'name': name},
+        options: await _getAuthOptions(),
+      );
+    } catch (e) {
+      throw Exception('创建歌单失败: $e');
+    }
+  }
+
+  static Future<void> addMusicToPlaylist(int playlistId, int musicId) async {
+    try {
+      final response = await _dio.post(
+        '/playlist/addMusic',
+        queryParameters: {'playlistId': playlistId, 'musicId': musicId},
+        options: await _getAuthOptions(),
+      );
+      final resData = response.data;
+      if (resData['code'] != '200' && resData['code'] != 200) {
+        throw Exception(resData['msg'] ?? '添加失败');
+      }
+    } catch (e) {
+      throw Exception('添加失败: $e');
+    }
+  }
 }

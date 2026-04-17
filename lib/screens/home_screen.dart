@@ -19,11 +19,17 @@ class _HomeScreenState extends State<HomeScreen> {
   String _errorMessage = '';
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
+  List<dynamic> _myPlaylists = [];
 
   @override
   void initState() {
     super.initState();
+    _loadAllData();
+  }
+
+  Future<void> _loadAllData() async {
     _loadMusicData();
+    _fetchPlaylists();
   }
 
   Future<void> _loadMusicData() async {
@@ -40,6 +46,11 @@ class _HomeScreenState extends State<HomeScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _fetchPlaylists() async {
+    final list = await MusicApi.getPlaylists();
+    setState(() => _myPlaylists = list);
   }
 
   void _onSearch(String value) async {
@@ -61,9 +72,129 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _showAddToPlaylistSheet(Map<String, dynamic> music) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext sheetContext) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '将《${music['title']}》加入歌单',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Divider(),
+              if (_myPlaylists.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Text('你还没有创建任何歌单哦'),
+                ),
+              ..._myPlaylists.map(
+                (p) => ListTile(
+                  leading: const Icon(Icons.queue_music),
+                  title: Text(p['name']),
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    try {
+                      await MusicApi.addMusicToPlaylist(p['id'], music['id']);
+                      if (sheetContext.mounted) {
+                        ScaffoldMessenger.of(sheetContext).showSnackBar(
+                          const SnackBar(content: Text('已成功加入歌单！')),
+                        );
+                      }
+                    } catch (e) {
+                      if (sheetContext.mounted) {
+                        ScaffoldMessenger.of(
+                          sheetContext,
+                        ).showSnackBar(SnackBar(content: Text(e.toString())));
+                      }
+                    }
+                  },
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.add),
+                title: const Text('新建歌单...'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showCreatePlaylistDialog();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCreatePlaylistDialog() {
+    final TextEditingController nameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('新建歌单'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(hintText: '输入歌单名称'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (nameController.text.isNotEmpty) {
+                await MusicApi.createPlaylist(nameController.text);
+                _fetchPlaylists();
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text('创建'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Colors.blueAccent),
+              child: Text(
+                '我的音乐资产',
+                style: TextStyle(color: Colors.white, fontSize: 24),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_box),
+              title: const Text('新建歌单'),
+              onTap: () {
+                Navigator.pop(context);
+                _showCreatePlaylistDialog();
+              },
+            ),
+            const Divider(),
+            ..._myPlaylists.map(
+              (p) => ListTile(
+                leading: const Icon(Icons.album),
+                title: Text(p['name']),
+                subtitle: Text('${p['musicCount'] ?? 0} 首歌曲'),
+              ),
+            ),
+          ],
+        ),
+      ),
       appBar: AppBar(
         title: _isSearching
             ? TextField(
@@ -161,7 +292,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
-              const Icon(Icons.play_arrow),
+              IconButton(
+                icon: const Icon(Icons.more_vert),
+                onPressed: () => _showAddToPlaylistSheet(music),
+              ),
             ],
           ),
           onTap: () =>
