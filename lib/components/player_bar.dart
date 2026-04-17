@@ -1,7 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
+import 'package:just_audio/just_audio.dart';
 import '../stores/music_store.dart';
 
 class PlayerBar extends StatelessWidget {
@@ -9,153 +8,93 @@ class PlayerBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final musicStore = Provider.of<MusicStore>(context);
+    final musicStore = context.watch<MusicStore>();
+    final currentSong = musicStore.currentSong;
 
-    if (musicStore.currentSong == null) return const SizedBox.shrink();
+    if (currentSong == null) return const SizedBox.shrink();
 
     return Container(
-      height: 90,
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.85)),
-      child: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Column(
-            children: [
-              StreamBuilder<Duration>(
-                stream: musicStore.audioPlayer.positionStream,
-                builder: (context, snapshot) {
-                  final position = snapshot.data ?? Duration.zero;
-                  final duration =
-                      musicStore.audioPlayer.duration ?? Duration.zero;
-
-                  return SliderTheme(
-                    data: SliderThemeData(
-                      trackHeight: 2,
-                      thumbShape: const RoundSliderThumbShape(
-                        enabledThumbRadius: 4,
-                      ),
-                      overlayShape: const RoundSliderOverlayShape(
-                        overlayRadius: 8,
-                      ),
-                    ),
-                    child: Slider(
-                      value: position.inMilliseconds.toDouble(),
-                      max: duration.inMilliseconds.toDouble() > 0
-                          ? duration.inMilliseconds.toDouble()
-                          : 1,
-                      onChanged: (value) {
-                        musicStore.audioPlayer.seek(
-                          Duration(milliseconds: value.toInt()),
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              musicStore.currentSong!.coverUrl,
-                              width: 56,
-                              height: 56,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  width: 56,
-                                  height: 56,
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.music_note),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                musicStore.currentSong!.title,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                musicStore.currentSong!.artist,
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.skip_previous),
-                            onPressed: musicStore.playPrev,
-                          ),
-                          StreamBuilder<PlayerState>(
-                            stream: musicStore.audioPlayer.playerStateStream,
-                            builder: (context, snapshot) {
-                              final playing = snapshot.data?.playing ?? false;
-                              return IconButton(
-                                iconSize: 40,
-                                icon: Icon(
-                                  playing
-                                      ? Icons.pause_circle_filled
-                                      : Icons.play_circle_filled,
-                                ),
-                                onPressed: () {
-                                  if (playing) {
-                                    musicStore.pause();
-                                  } else {
-                                    musicStore.play();
-                                  }
-                                },
-                              );
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.skip_next),
-                            onPressed: musicStore.playNext,
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.tune),
-                            onPressed: () {},
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.queue_music),
-                            onPressed: () {},
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+      height: 70,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
           ),
-        ),
+        ],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              currentSong['coverUrl'] ?? 'https://via.placeholder.com/50',
+              width: 48,
+              height: 48,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.music_note, size: 48),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  currentSong['title'] ?? '未知歌曲',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  currentSong['artist'] ?? '未知歌手',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  maxLines: 1,
+                ),
+              ],
+            ),
+          ),
+          StreamBuilder<PlayerState>(
+            stream: musicStore.audioPlayer.playerStateStream,
+            builder: (context, snapshot) {
+              final playerState = snapshot.data;
+              final processingState = playerState?.processingState;
+              final playing = playerState?.playing;
+
+              if (processingState == ProcessingState.loading ||
+                  processingState == ProcessingState.buffering) {
+                return Container(
+                  margin: const EdgeInsets.all(8.0),
+                  width: 32.0,
+                  height: 32.0,
+                  child: const CircularProgressIndicator(),
+                );
+              } else if (playing != true) {
+                return IconButton(
+                  icon: const Icon(Icons.play_circle_fill),
+                  iconSize: 42,
+                  color: Colors.blueAccent,
+                  onPressed: musicStore.togglePlay,
+                );
+              } else {
+                return IconButton(
+                  icon: const Icon(Icons.pause_circle_filled),
+                  iconSize: 42,
+                  color: Colors.blueAccent,
+                  onPressed: musicStore.togglePlay,
+                );
+              }
+            },
+          ),
+        ],
       ),
     );
   }

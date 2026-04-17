@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../api/music_api.dart';
+import '../stores/music_store.dart';
+import '../components/player_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -49,10 +52,15 @@ class _HomeScreenState extends State<HomeScreen> {
               });
               _loadMusicData();
             },
-          ),
+          )
         ],
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          Expanded(child: _buildBody()),
+          const PlayerBar(),
+        ],
+      ),
     );
   }
 
@@ -63,10 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (_errorMessage.isNotEmpty) {
       return Center(
-        child: Text(
-          '出错了: $_errorMessage',
-          style: const TextStyle(color: Colors.red),
-        ),
+        child: Text('出错了: $_errorMessage', style: const TextStyle(color: Colors.red)),
       );
     }
 
@@ -94,9 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
           subtitle: Text(music['artist'] ?? '未知歌手'),
           trailing: const Icon(Icons.play_arrow),
           onTap: () {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('准备播放: ${music['title']}')));
+            context.read<MusicStore>().playSong(music);
           },
         );
       },
