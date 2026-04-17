@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,26 @@ class MusicApi {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('echo_token') ?? '';
     return Options(headers: {'Authorization': 'Bearer $token'});
+  }
+
+  static Future<int?> _getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('echo_token') ?? '';
+    if (token.isEmpty) return null;
+
+    try {
+      final parts = token.split('.');
+      if (parts.length == 3) {
+        final payload = parts[1];
+        final normalized = base64Url.normalize(payload);
+        final decoded = utf8.decode(base64Url.decode(normalized));
+        final data = jsonDecode(decoded);
+        return data['id'];
+      }
+    } catch (e) {
+      debugPrint('解析 Token 失败: $e');
+    }
+    return null;
   }
 
   static Future<List<dynamic>> getMusicList() async {
@@ -107,8 +128,12 @@ class MusicApi {
 
   static Future<List<dynamic>> getPlaylists() async {
     try {
+      final userId = await _getUserId();
+      if (userId == null) return [];
+
       final response = await _dio.get(
         '/playlist/list',
+        queryParameters: {'userId': userId},
         options: await _getAuthOptions(),
       );
       final resData = response.data;
@@ -117,15 +142,19 @@ class MusicApi {
       }
       return [];
     } catch (e) {
+      debugPrint('获取歌单失败: $e');
       return [];
     }
   }
 
   static Future<void> createPlaylist(String name) async {
     try {
+      final userId = await _getUserId();
+      if (userId == null) throw Exception('用户未登录');
+
       await _dio.post(
         '/playlist/create',
-        queryParameters: {'name': name},
+        data: {'name': name, 'userId': userId},
         options: await _getAuthOptions(),
       );
     } catch (e) {
