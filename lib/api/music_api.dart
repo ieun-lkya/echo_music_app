@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_constants.dart';
@@ -83,8 +84,28 @@ class MusicApi {
       }
       return [];
     } catch (e) {
-      print('AI 歌单接口暂未接入，自动隐藏该模块：$e');
+      debugPrint('AI 歌单接口暂未接入，自动隐藏该模块：$e');
       return [];
+    }
+  }
+
+  static Future<String> getArtistBio(String artistName) async {
+    try {
+      final options = await _getAuthOptions();
+      final response = await _dio.get(
+        '/music/ai/artist/bio',
+        queryParameters: {'artist': artistName},
+        options: options,
+      );
+
+      final resData = response.data;
+      if (resData['code'] == '200' || resData['code'] == 200) {
+        return resData['data'].toString();
+      } else {
+        throw Exception(resData['msg'] ?? '获取传记失败');
+      }
+    } catch (e) {
+      throw Exception('网络请求异常：$e');
     }
   }
 }
