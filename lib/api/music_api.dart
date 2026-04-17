@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_constants.dart';
 
@@ -13,7 +14,7 @@ class MusicApi {
   static Future<Options> _getAuthOptions() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('echo_token') ?? '';
-    return Options(headers: {'token': token});
+    return Options(headers: {'Authorization': 'Bearer $token'});
   }
 
   static Future<List<dynamic>> getMusicList() async {
@@ -54,15 +55,19 @@ class MusicApi {
   static Future<List<dynamic>> getComments(int musicId) async {
     try {
       final response = await _dio.get(
-        '/music/comment/list/$musicId',
+        '/music/comment/list',
+        queryParameters: {'musicId': musicId},
         options: await _getAuthOptions(),
       );
+
       final resData = response.data;
       if (resData['code'] == '200' || resData['code'] == 200) {
         return resData['data'];
+      } else {
+        return [];
       }
-      return [];
     } catch (e) {
+      debugPrint('获取评论失败: $e');
       return [];
     }
   }
