@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        context.go('/admin');
+        context.go('/');
       }
     } catch (e) {
       if (mounted) {

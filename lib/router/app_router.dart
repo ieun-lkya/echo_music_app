@@ -7,22 +7,24 @@ import '../screens/admin_screen.dart';
 final router = GoRouter(
   initialLocation: '/',
   redirect: (context, state) async {
-    final isGoingToAdmin = state.uri.toString().startsWith('/admin');
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('echo_token');
 
-    if (isGoingToAdmin) {
-      final prefs = await SharedPreferences.getInstance();
-      final adminToken = prefs.getString('echo_token');
+    final isGoingToLogin = state.uri.toString() == '/login';
 
-      if (adminToken == null || adminToken.isEmpty) {
-        return '/login';
-      }
+    if ((token == null || token.isEmpty) && !isGoingToLogin) {
+      return '/login';
+    }
+
+    if (token != null && token.isNotEmpty && isGoingToLogin) {
+      return '/';
     }
 
     return null;
   },
   routes: [
-    GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+    GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
     GoRoute(path: '/admin', builder: (context, state) => const AdminScreen()),
   ],
 );
