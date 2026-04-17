@@ -40,7 +40,7 @@ dependencies:
   audio_video_progress_bar: ^2.0.3 # 非常棒的第三方进度条，替代 Element-plus 的 slider
   # 图表与图标
   fl_chart: ^0.65.0
-  lucide_icons: ^0.1.1 # 对应你的 lucide-vue-next
+  lucide_icons: ^0.257.0 # 对应你的 lucide-vue-next
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
