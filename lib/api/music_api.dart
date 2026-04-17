@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_constants.dart';
@@ -7,7 +6,7 @@ class MusicApi {
   static final Dio _dio = Dio(
     BaseOptions(
       baseUrl: ApiConstants.baseUrl,
-      connectTimeout: const Duration(seconds: 5),
+      connectTimeout: const Duration(seconds: 15),
     ),
   );
 
@@ -19,93 +18,26 @@ class MusicApi {
 
   static Future<List<dynamic>> getMusicList() async {
     try {
-      final options = await _getAuthOptions();
-      final response = await _dio.get('/music/list', options: options);
-
-      final resData = response.data;
-      if (resData['code'] == '200' || resData['code'] == 200) {
-        return resData['data'];
-      } else {
-        throw Exception(resData['msg'] ?? '获取音乐失败');
-      }
-    } catch (e) {
-      throw Exception('网络请求异常: $e');
-    }
-  }
-
-  static Future<void> toggleLike(String musicId) async {
-    try {
-      final options = await _getAuthOptions();
-      final response = await _dio.post(
-        '/music/like/$musicId',
-        options: options,
+      final response = await _dio.get(
+        '/music/list',
+        options: await _getAuthOptions(),
       );
-
-      final resData = response.data;
-      if (resData['code'] != '200' && resData['code'] != 200) {
-        throw Exception(resData['msg'] ?? '操作失败');
-      }
+      return response.data;
     } catch (e) {
-      throw Exception('网络请求异常: $e');
+      throw Exception('获取列表失败：$e');
     }
   }
 
-  static Future<List<dynamic>> aiRecommend(String prompt) async {
+  static Future<List<dynamic>> aiRecommend(String scene) async {
     try {
-      final options = await _getAuthOptions();
       final response = await _dio.get(
         '/music/ai/recommend',
-        queryParameters: {'scene': prompt},
-        options: options,
+        queryParameters: {'scene': scene},
+        options: await _getAuthOptions(),
       );
-
-      final resData = response.data;
-      if (resData['code'] == '200' || resData['code'] == 200) {
-        return resData['data'];
-      } else {
-        throw Exception(resData['msg'] ?? 'AI 思考断片了...');
-      }
+      return response.data;
     } catch (e) {
-      throw Exception('AI 请求失败：$e');
-    }
-  }
-
-  static Future<List<dynamic>> generateAiPlaylists() async {
-    try {
-      final options = await _getAuthOptions();
-      final response = await _dio.get(
-        '/music/ai/generatePlaylists',
-        options: options,
-      );
-
-      final resData = response.data;
-      if (resData['code'] == '200' || resData['code'] == 200) {
-        return resData['data'];
-      }
-      return [];
-    } catch (e) {
-      debugPrint('AI 歌单接口暂未接入，自动隐藏该模块：$e');
-      return [];
-    }
-  }
-
-  static Future<String> getArtistBio(String artistName) async {
-    try {
-      final options = await _getAuthOptions();
-      final response = await _dio.get(
-        '/music/ai/artist/bio',
-        queryParameters: {'artist': artistName},
-        options: options,
-      );
-
-      final resData = response.data;
-      if (resData['code'] == '200' || resData['code'] == 200) {
-        return resData['data'].toString();
-      } else {
-        throw Exception(resData['msg'] ?? '获取传记失败');
-      }
-    } catch (e) {
-      throw Exception('网络请求异常：$e');
+      throw Exception('AI 推荐失败：$e');
     }
   }
 }

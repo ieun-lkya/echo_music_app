@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import '../stores/music_store.dart';
-import '../api/music_api.dart';
 
 class PlayerBar extends StatelessWidget {
   const PlayerBar({super.key});
@@ -87,22 +86,10 @@ class PlayerBar extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        final artist = currentSong['artist'];
-                        if (artist != null && artist != '未知歌手') {
-                          _showArtistBio(context, artist);
-                        }
-                      },
-                      child: Text(
-                        currentSong['artist'] ?? '未知歌手',
-                        style: const TextStyle(
-                          color: Colors.blueAccent,
-                          fontSize: 12,
-                          decoration: TextDecoration.underline,
-                        ),
-                        maxLines: 1,
-                      ),
+                    Text(
+                      currentSong['artist'] ?? '未知歌手',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      maxLines: 1,
                     ),
                   ],
                 ),
@@ -158,84 +145,6 @@ class PlayerBar extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  void _showArtistBio(BuildContext context, String artist) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1E1E2C),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.auto_awesome, color: Colors.purpleAccent),
-                  const SizedBox(width: 8),
-                  Text(
-                    'AI 眼中的 $artist',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const Divider(color: Colors.grey),
-              const SizedBox(height: 10),
-              Expanded(
-                child: FutureBuilder<String>(
-                  future: MusicApi.getArtistBio(artist),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(
-                              color: Colors.purpleAccent,
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'AI 正在翻阅全网音乐百科...',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                      );
-                    } else if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          '翻车了：${snapshot.error}',
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      );
-                    } else {
-                      return SingleChildScrollView(
-                        child: Text(
-                          snapshot.data ?? '暂无资料',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            height: 1.6,
-                            fontSize: 15,
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
