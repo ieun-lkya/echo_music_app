@@ -80,11 +80,11 @@ class MusicApi {
       final resData = response.data;
       if (resData['code'] == '200' || resData['code'] == 200) {
         return resData['data'];
-      } else {
-        throw Exception(resData['msg'] ?? 'AI 歌单生成失败');
       }
+      return [];
     } catch (e) {
-      throw Exception('网络请求异常：$e');
+      print('AI 歌单接口暂未接入，自动隐藏该模块：$e');
+      return [];
     }
   }
 }
