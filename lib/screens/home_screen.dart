@@ -1,83 +1,105 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../stores/music_store.dart';
-import '../components/player_bar.dart';
+import '../api/music_api.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final musicStore = Provider.of<MusicStore>(context);
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
+class _HomeScreenState extends State<HomeScreen> {
+  List<dynamic> _musicList = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMusicData();
+  }
+
+  Future<void> _loadMusicData() async {
+    try {
+      final data = await MusicApi.getMusicList();
+      setState(() {
+        _musicList = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Echo Music'),
+        title: const Text('Echo 音乐库'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.admin_panel_settings),
+            icon: const Icon(Icons.refresh),
             onPressed: () {
-              Navigator.pushNamed(context, '/admin');
+              setState(() {
+                _isLoading = true;
+                _errorMessage = '';
+              });
+              _loadMusicData();
             },
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text(
-                    '推荐音乐',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: musicStore.playlist.length,
-                  itemBuilder: (context, index) {
-                    final song = musicStore.playlist[index];
-                    return ListTile(
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          song.coverUrl,
-                          width: 56,
-                          height: 56,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 56,
-                              height: 56,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.music_note),
-                            );
-                          },
-                        ),
-                      ),
-                      title: Text(song.title),
-                      subtitle: Text(song.artist),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.play_arrow),
-                        onPressed: () {
-                          musicStore.setCurrentSong(song);
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ],
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage.isNotEmpty) {
+      return Center(
+        child: Text(
+          '出错了: $_errorMessage',
+          style: const TextStyle(color: Colors.red),
+        ),
+      );
+    }
+
+    if (_musicList.isEmpty) {
+      return const Center(child: Text('当前曲库空空如也~'));
+    }
+
+    return ListView.builder(
+      itemCount: _musicList.length,
+      itemBuilder: (context, index) {
+        final music = _musicList[index];
+        return ListTile(
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: Image.network(
+              music['coverUrl'] ?? 'https://via.placeholder.com/50',
+              width: 50,
+              height: 50,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.music_note, size: 50),
             ),
           ),
-        ],
-      ),
-      bottomNavigationBar: const PlayerBar(),
+          title: Text(music['title'] ?? '未知歌曲'),
+          subtitle: Text(music['artist'] ?? '未知歌手'),
+          trailing: const Icon(Icons.play_arrow),
+          onTap: () {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('准备播放: ${music['title']}')));
+          },
+        );
+      },
     );
   }
 }
