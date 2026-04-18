@@ -3,9 +3,17 @@ import 'package:provider/provider.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import '../stores/music_store.dart';
+import '../api/music_api.dart';
 
-class PlayerBar extends StatelessWidget {
+class PlayerBar extends StatefulWidget {
   const PlayerBar({super.key});
+
+  @override
+  State<PlayerBar> createState() => _PlayerBarState();
+}
+
+class _PlayerBarState extends State<PlayerBar> {
+  bool _isLiked = false;
 
   @override
   Widget build(BuildContext context) {
@@ -86,10 +94,17 @@ class PlayerBar extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    Text(
-                      currentSong['artist'] ?? '未知歌手',
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                      maxLines: 1,
+                    GestureDetector(
+                      onTap: () => _showArtistBio(context, currentSong['artist']),
+                      child: Text(
+                        currentSong['artist'] ?? '未知歌手',
+                        style: const TextStyle(
+                          color: Colors.blueAccent,
+                          fontSize: 12,
+                          decoration: TextDecoration.underline,
+                        ),
+                        maxLines: 1,
+                      ),
                     ),
                   ],
                 ),
@@ -97,6 +112,13 @@ class PlayerBar extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  IconButton(
+                    icon: Icon(
+                      _isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: _isLiked ? Colors.red : Colors.black87,
+                    ),
+                    onPressed: () => _toggleLike(musicStore, currentSong),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.skip_previous),
                     color: Colors.black87,
@@ -144,6 +166,67 @@ class PlayerBar extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _toggleLike(MusicStore musicStore, Map<String, dynamic> song) async {
+    final musicId = song['id'] is int ? song['id'] : int.parse(song['id'].toString());
+    try {
+      if (_isLiked) {
+        await MusicApi.unlikeMusic(musicId);
+      } else {
+        await MusicApi.likeMusic(musicId);
+      }
+      if (mounted) {
+        setState(() => _isLiked = !_isLiked);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('操作失败：$e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showArtistBio(BuildContext context, String? artistName) async {
+    if (artistName == null || artistName.isEmpty) return;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetContext) => Container(
+        padding: const EdgeInsets.all(20),
+        child: FutureBuilder<String?>(
+          future: MusicApi.getArtistBio(artistName),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError || snapshot.data == null) {
+              return const Center(child: Text('暂无该歌手的传记信息'));
+            }
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  artistName,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Divider(),
+                const SizedBox(height: 8),
+                Text(
+                  snapshot.data!,
+                  style: const TextStyle(fontSize: 16, height: 1.5),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

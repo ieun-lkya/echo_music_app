@@ -4,7 +4,6 @@ import '../api/music_api.dart';
 import '../stores/music_store.dart';
 import '../components/player_bar.dart';
 import '../components/comment_sheet.dart';
-import 'ai_recommend_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -165,36 +164,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blueAccent),
-              child: Text(
-                '我的音乐资产',
-                style: TextStyle(color: Colors.white, fontSize: 24),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.add_box),
-              title: const Text('新建歌单'),
-              onTap: () {
-                Navigator.pop(context);
-                _showCreatePlaylistDialog();
-              },
-            ),
-            const Divider(),
-            ..._myPlaylists.map(
-              (p) => ListTile(
-                leading: const Icon(Icons.album),
-                title: Text(p['name']),
-                subtitle: Text('${p['musicCount'] ?? 0} 首歌曲'),
-              ),
-            ),
-          ],
-        ),
-      ),
       appBar: AppBar(
         title: _isSearching
             ? TextField(
@@ -219,13 +188,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               });
             },
-          ),
-          IconButton(
-            icon: const Icon(Icons.smart_toy, color: Colors.blueAccent),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AiRecommendScreen()),
-            ),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),

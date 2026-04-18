@@ -4,7 +4,8 @@ import '../config/api_constants.dart';
 class UserApi {
   static final Dio _dio = Dio(BaseOptions(
     baseUrl: ApiConstants.baseUrl,
-    connectTimeout: const Duration(seconds: 5),
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 30),
   ));
 
   static Future<Map<String, dynamic>> login(String username, String password) async {

@@ -1,6 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../screens/home_screen.dart';
+import '../screens/main_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/admin_screen.dart';
 
@@ -24,7 +24,7 @@ final router = GoRouter(
   },
   routes: [
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-    GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+    GoRoute(path: '/', builder: (context, state) => const MainScreen()),
     GoRoute(path: '/admin', builder: (context, state) => const AdminScreen()),
   ],
 );

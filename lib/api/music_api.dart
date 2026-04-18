@@ -8,7 +8,8 @@ class MusicApi {
   static final Dio _dio = Dio(
     BaseOptions(
       baseUrl: ApiConstants.baseUrl,
-      connectTimeout: const Duration(seconds: 15),
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
     ),
   );
 
@@ -175,6 +176,120 @@ class MusicApi {
       }
     } catch (e) {
       throw Exception('添加失败: $e');
+    }
+  }
+
+  static Future<List<dynamic>> getPlaylistDetail(int playlistId) async {
+    try {
+      final response = await _dio.get(
+        '/playlist/detail/$playlistId',
+        options: await _getAuthOptions(),
+      );
+      final resData = response.data;
+      if (resData['code'] == '200' || resData['code'] == 200) {
+        return resData['data'];
+      }
+      return [];
+    } catch (e) {
+      debugPrint('获取歌单详情失败: $e');
+      return [];
+    }
+  }
+
+  static Future<void> deleteMusicFromPlaylist(
+    int playlistId,
+    int musicId,
+  ) async {
+    try {
+      final response = await _dio.delete(
+        '/playlist/removeMusic',
+        queryParameters: {'playlistId': playlistId, 'musicId': musicId},
+        options: await _getAuthOptions(),
+      );
+      final resData = response.data;
+      if (resData['code'] != '200' && resData['code'] != 200) {
+        throw Exception(resData['msg'] ?? '删除失败');
+      }
+    } catch (e) {
+      throw Exception('删除失败: $e');
+    }
+  }
+
+  static Future<void> deletePlaylist(int playlistId) async {
+    try {
+      final response = await _dio.delete(
+        '/playlist/delete/$playlistId',
+        options: await _getAuthOptions(),
+      );
+      final resData = response.data;
+      if (resData['code'] != '200' && resData['code'] != 200) {
+        throw Exception(resData['msg'] ?? '删除失败');
+      }
+    } catch (e) {
+      throw Exception('删除歌单失败: $e');
+    }
+  }
+
+  static Future<void> likeMusic(int musicId) async {
+    try {
+      final response = await _dio.post(
+        '/music/like/$musicId',
+        options: await _getAuthOptions(),
+      );
+      final resData = response.data;
+      if (resData['code'] != '200' && resData['code'] != 200) {
+        throw Exception(resData['msg'] ?? '点赞失败');
+      }
+    } catch (e) {
+      throw Exception('点赞失败: $e');
+    }
+  }
+
+  static Future<void> unlikeMusic(int musicId) async {
+    try {
+      final response = await _dio.post(
+        '/music/unlike/$musicId',
+        options: await _getAuthOptions(),
+      );
+      final resData = response.data;
+      if (resData['code'] != '200' && resData['code'] != 200) {
+        throw Exception(resData['msg'] ?? '取消点赞失败');
+      }
+    } catch (e) {
+      throw Exception('取消点赞失败: $e');
+    }
+  }
+
+  static Future<void> likeComment(int commentId) async {
+    try {
+      final response = await _dio.post(
+        '/comment/like/$commentId',
+        options: await _getAuthOptions(),
+      );
+      final resData = response.data;
+      if (resData['code'] != '200' && resData['code'] != 200) {
+        throw Exception(resData['msg'] ?? '点赞失败');
+      }
+    } catch (e) {
+      throw Exception('点赞失败: $e');
+    }
+  }
+
+  static Future<String?> getArtistBio(String artistName) async {
+    try {
+      final response = await _dio.get(
+        '/music/artist/bio',
+        queryParameters: {'artistName': artistName},
+        options: await _getAuthOptions(),
+      );
+      final resData = response.data;
+      if (resData['code'] == '200' || resData['code'] == 200) {
+        return resData['data'];
+      }
+      return null;
+    } catch (e) {
+      debugPrint('获取歌手传记失败: $e');
+      return null;
     }
   }
 }

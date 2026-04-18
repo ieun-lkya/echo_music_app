@@ -35,6 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final token = userData['token'];
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('echo_token', token);
+        await prefs.setString('echo_username', username);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

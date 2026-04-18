@@ -13,6 +13,7 @@ class _CommentSheetState extends State<CommentSheet> {
   final TextEditingController _commentController = TextEditingController();
   List<dynamic> _comments = [];
   bool _isLoading = true;
+  final Set<int> _likedComments = {};
 
   @override
   void initState() {
@@ -54,6 +55,24 @@ class _CommentSheetState extends State<CommentSheet> {
     }
   }
 
+  Future<void> _toggleLike(int commentId, int index) async {
+    try {
+      if (_likedComments.contains(commentId)) {
+        await MusicApi.likeComment(commentId);
+        setState(() {
+          _likedComments.add(commentId);
+          _comments[index]['likeCount'] = (_comments[index]['likeCount'] ?? 0) + 1;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('操作失败：$e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -73,6 +92,8 @@ class _CommentSheetState extends State<CommentSheet> {
                     itemCount: _comments.length,
                     itemBuilder: (context, index) {
                       final c = _comments[index];
+                      final commentId = c['id'] ?? 0;
+                      final isLiked = _likedComments.contains(commentId);
                       return ListTile(
                         leading: const CircleAvatar(child: Icon(Icons.person)),
                         title: Text(
@@ -83,15 +104,38 @@ class _CommentSheetState extends State<CommentSheet> {
                           ),
                         ),
                         subtitle: Text(c['content'] ?? ''),
-                        trailing: Text(
-                          c['createTime'] != null &&
-                                  c['createTime'].toString().length >= 10
-                              ? c['createTime'].toString().substring(5, 10)
-                              : '',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
-                          ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Icon(
+                                    isLiked ? Icons.favorite : Icons.favorite_border,
+                                    color: isLiked ? Colors.red : Colors.grey,
+                                    size: 20,
+                                  ),
+                                  onPressed: () => _toggleLike(commentId, index),
+                                ),
+                                Text(
+                                  '${c['likeCount'] ?? 0}',
+                                  style: const TextStyle(fontSize: 10),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              c['createTime'] != null &&
+                                      c['createTime'].toString().length >= 10
+                                  ? c['createTime'].toString().substring(5, 10)
+                                  : '',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     },
