@@ -16,6 +16,15 @@ class PlayerBar extends StatefulWidget {
 class _PlayerBarState extends State<PlayerBar> {
   bool _isLiked = false;
 
+  static final Map<String, Future<String?>> _bioCache = {};
+
+  Future<String?> _getArtistBioCached(String artistName) {
+    if (!_bioCache.containsKey(artistName)) {
+      _bioCache[artistName] = MusicApi.getArtistBio(artistName);
+    }
+    return _bioCache[artistName]!;
+  }
+
   @override
   Widget build(BuildContext context) {
     final musicStore = context.watch<MusicStore>();
@@ -202,10 +211,14 @@ class _PlayerBarState extends State<PlayerBar> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (sheetContext) => Container(
         padding: const EdgeInsets.all(20),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
+        ),
         child: FutureBuilder<String?>(
-          future: MusicApi.getArtistBio(artistName),
+          future: _getArtistBioCached(artistName),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -226,9 +239,13 @@ class _PlayerBarState extends State<PlayerBar> {
                 ),
                 const Divider(),
                 const SizedBox(height: 8),
-                Text(
-                  snapshot.data!,
-                  style: const TextStyle(fontSize: 16, height: 1.5),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Text(
+                      snapshot.data!,
+                      style: const TextStyle(fontSize: 16, height: 1.5),
+                    ),
+                  ),
                 ),
               ],
             );
