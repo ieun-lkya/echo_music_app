@@ -377,8 +377,8 @@ class MusicApi {
   static Future<String?> getArtistBio(String artistName) async {
     try {
       final response = await _dio.get(
-        '/music/artist/bio',
-        queryParameters: {'artistName': artistName},
+        '/music/ai/artist/bio',
+        queryParameters: {'artist': artistName},
         options: await _getAuthOptions(),
       );
       final resData = response.data;
