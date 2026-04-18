@@ -130,14 +130,14 @@ class MusicApi {
 
   static Future<List<dynamic>> aiRecommend(String scene) async {
     try {
-      final response = await _dio.post(
-        '/music/recommend',
-        data: {'text': scene},
+      final response = await _dio.get(
+        '/music/ai/recommend',
+        queryParameters: {'scene': scene},
         options: await _getAuthOptions(),
       );
       final resData = response.data;
       if (resData['code'] == '200' || resData['code'] == 200) {
-        return resData['data'];
+        return resData['data'] ?? [];
       } else {
         throw Exception(resData['msg'] ?? 'AI 推荐失败');
       }
