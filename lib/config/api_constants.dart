@@ -11,7 +11,7 @@ class ApiConstants {
   static String get baseUrl {
     // kDebugMode 在真机 release 包中为 false
     // 你也可以手动改为 false 来强制使用真机地址
-    const useRealDevice = false;
+    const useRealDevice = true;
     return useRealDevice ? _realDeviceUrl : _emulatorUrl;
   }
 }
