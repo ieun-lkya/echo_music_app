@@ -50,7 +50,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchPlaylists() async {
     final list = await MusicApi.getPlaylists();
-    setState(() => _myPlaylists = list);
+    if (mounted) {
+      setState(() => _myPlaylists = list);
+    }
   }
 
   void _onSearch(String value) async {
