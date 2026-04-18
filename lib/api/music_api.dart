@@ -43,7 +43,7 @@ class MusicApi {
         final decoded = utf8.decode(base64Url.decode(normalized));
         final data = jsonDecode(decoded);
         debugPrint('Token 解析结果: $data');
-        final userId = data['id'];
+        final userId = data['userId'];
         if (userId != null) {
           final id = userId is int ? userId : int.parse(userId.toString());
           // 保存到本地，下次直接用
