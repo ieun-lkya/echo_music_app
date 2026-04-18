@@ -5,7 +5,7 @@ import 'dart:convert';
 
 class MusicStore extends ChangeNotifier {
   final AudioPlayer audioPlayer = AudioPlayer();
-  
+
   Map<String, dynamic>? currentSong;
   List<dynamic> currentPlaylist = [];
   int currentIndex = -1;
@@ -17,7 +17,7 @@ class MusicStore extends ChangeNotifier {
       }
     });
   }
-  
+
   Future<void> playPlaylist(List<dynamic> playlist, int index) async {
     currentPlaylist = playlist;
     currentIndex = index;
@@ -27,12 +27,12 @@ class MusicStore extends ChangeNotifier {
 
   Future<void> _playCurrentIndex() async {
     if (currentIndex < 0 || currentIndex >= currentPlaylist.length) return;
-    
+
     currentSong = currentPlaylist[currentIndex];
     notifyListeners();
 
     try {
-      final audioUrl = currentSong!['audioUrl'];
+      final audioUrl = currentSong!['audioUrl'] ?? currentSong!['audio_url'];
       if (audioUrl != null && audioUrl.isNotEmpty) {
         await audioPlayer.setUrl(audioUrl);
         audioPlayer.play();
@@ -48,14 +48,14 @@ class MusicStore extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final historyJson = prefs.getString('play_history') ?? '[]';
       final history = jsonDecode(historyJson) as List;
-      
+
       history.removeWhere((item) => item['id'] == currentSong!['id']);
       history.add(currentSong);
-      
+
       if (history.length > 50) {
         history.removeRange(0, history.length - 50);
       }
-      
+
       await prefs.setString('play_history', jsonEncode(history));
     } catch (e) {
       debugPrint('保存播放历史失败: $e');
@@ -70,7 +70,8 @@ class MusicStore extends ChangeNotifier {
 
   void playPrevious() {
     if (currentPlaylist.isEmpty) return;
-    currentIndex = (currentIndex - 1 + currentPlaylist.length) % currentPlaylist.length;
+    currentIndex =
+        (currentIndex - 1 + currentPlaylist.length) % currentPlaylist.length;
     _playCurrentIndex();
   }
 
