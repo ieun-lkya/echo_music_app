@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../api/user_api.dart';
+import '../utils/toast_util.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,9 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text.trim();
 
     if (username.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入账号和密码')),
-      );
+      ToastUtil.error(context, '请输入账号和密码');
       return;
     }
 
@@ -36,24 +35,17 @@ class _LoginScreenState extends State<LoginScreen> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('echo_token', token);
         await prefs.setString('echo_username', username);
+        if (userData['id'] != null) {
+          await prefs.setInt('echo_user_id', userData['id']);
+        }
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('🎉 登录成功！'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          ToastUtil.success(context, '🎉 登录成功！');
           context.go('/');
         }
       } else {
         await UserApi.register(username, password);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('注册成功，请登录!'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          ToastUtil.success(context, '注册成功，请登录!');
           setState(() {
             _isLoginMode = true;
             _passwordController.clear();
@@ -62,9 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
+        ToastUtil.error(context, e.toString());
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -121,10 +111,8 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () => setState(() => _isLoginMode = !_isLoginMode),
-                child: Text(
-                  _isLoginMode ? '没有账号？点击注册' : '已有账号？去登录',
-                ),
-              )
+                child: Text(_isLoginMode ? '没有账号？点击注册' : '已有账号？去登录'),
+              ),
             ],
           ),
         ),

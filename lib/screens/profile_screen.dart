@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
+import '../utils/toast_util.dart';
+import 'play_history_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -51,6 +53,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('echo_token');
       await prefs.remove('echo_username');
+      await prefs.remove('echo_user_id');
       if (mounted) {
         context.go('/login');
       }
@@ -124,27 +127,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: Icons.history,
           title: '播放历史',
           onTap: () {
-            ScaffoldMessenger.of(
+            Navigator.push(
               context,
-            ).showSnackBar(const SnackBar(content: Text('播放历史功能开发中...')));
+              MaterialPageRoute(builder: (_) => const PlayHistoryScreen()),
+            );
           },
         ),
         _buildMenuItem(
           icon: Icons.favorite_border,
           title: '我的收藏',
           onTap: () {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('收藏功能开发中...')));
+            ToastUtil.info(context, '收藏功能开发中...');
           },
         ),
         _buildMenuItem(
           icon: Icons.settings_outlined,
           title: '设置',
           onTap: () {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('设置功能开发中...')));
+            ToastUtil.info(context, '设置功能开发中...');
           },
         ),
         _buildMenuItem(

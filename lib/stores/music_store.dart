@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class MusicStore extends ChangeNotifier {
   final AudioPlayer audioPlayer = AudioPlayer();
@@ -20,6 +22,7 @@ class MusicStore extends ChangeNotifier {
     currentPlaylist = playlist;
     currentIndex = index;
     await _playCurrentIndex();
+    await _saveToHistory();
   }
 
   Future<void> _playCurrentIndex() async {
@@ -36,6 +39,26 @@ class MusicStore extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint("音频加载失败: $e");
+    }
+  }
+
+  Future<void> _saveToHistory() async {
+    if (currentSong == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final historyJson = prefs.getString('play_history') ?? '[]';
+      final history = jsonDecode(historyJson) as List;
+      
+      history.removeWhere((item) => item['id'] == currentSong!['id']);
+      history.add(currentSong);
+      
+      if (history.length > 50) {
+        history.removeRange(0, history.length - 50);
+      }
+      
+      await prefs.setString('play_history', jsonEncode(history));
+    } catch (e) {
+      debugPrint('保存播放历史失败: $e');
     }
   }
 

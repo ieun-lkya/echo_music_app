@@ -4,6 +4,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import '../stores/music_store.dart';
 import '../api/music_api.dart';
+import '../utils/toast_util.dart';
 
 class PlayerBar extends StatefulWidget {
   const PlayerBar({super.key});
@@ -95,7 +96,8 @@ class _PlayerBarState extends State<PlayerBar> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     GestureDetector(
-                      onTap: () => _showArtistBio(context, currentSong['artist']),
+                      onTap: () =>
+                          _showArtistBio(context, currentSong['artist']),
                       child: Text(
                         currentSong['artist'] ?? '未知歌手',
                         style: const TextStyle(
@@ -137,7 +139,9 @@ class _PlayerBarState extends State<PlayerBar> {
                           margin: const EdgeInsets.symmetric(horizontal: 12.0),
                           width: 24.0,
                           height: 24.0,
-                          child: const CircularProgressIndicator(strokeWidth: 3),
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 3,
+                          ),
                         );
                       } else if (playing != true) {
                         return IconButton(
@@ -170,8 +174,13 @@ class _PlayerBarState extends State<PlayerBar> {
     );
   }
 
-  Future<void> _toggleLike(MusicStore musicStore, Map<String, dynamic> song) async {
-    final musicId = song['id'] is int ? song['id'] : int.parse(song['id'].toString());
+  Future<void> _toggleLike(
+    MusicStore musicStore,
+    Map<String, dynamic> song,
+  ) async {
+    final musicId = song['id'] is int
+        ? song['id']
+        : int.parse(song['id'].toString());
     try {
       if (_isLiked) {
         await MusicApi.unlikeMusic(musicId);
@@ -183,9 +192,7 @@ class _PlayerBarState extends State<PlayerBar> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('操作失败：$e')),
-        );
+        ToastUtil.error(context, '操作失败：$e');
       }
     }
   }

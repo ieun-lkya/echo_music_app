@@ -21,8 +21,19 @@ class MusicApi {
 
   static Future<int?> _getUserId() async {
     final prefs = await SharedPreferences.getInstance();
+
+    // 优先从本地存储读取（登录时保存的）
+    final savedUserId = prefs.getInt('echo_user_id');
+    if (savedUserId != null) {
+      return savedUserId;
+    }
+
+    // 如果本地没有，尝试从 JWT Token 解析
     final token = prefs.getString('echo_token') ?? '';
-    if (token.isEmpty) return null;
+    if (token.isEmpty) {
+      debugPrint('Token 为空');
+      return null;
+    }
 
     try {
       final parts = token.split('.');
@@ -31,7 +42,15 @@ class MusicApi {
         final normalized = base64Url.normalize(payload);
         final decoded = utf8.decode(base64Url.decode(normalized));
         final data = jsonDecode(decoded);
-        return data['id'];
+        debugPrint('Token 解析结果: $data');
+        final userId = data['id'];
+        if (userId != null) {
+          final id = userId is int ? userId : int.parse(userId.toString());
+          // 保存到本地，下次直接用
+          await prefs.setInt('echo_user_id', id);
+          return id;
+        }
+        debugPrint('Token 中未找到 id 字段');
       }
     } catch (e) {
       debugPrint('解析 Token 失败: $e');

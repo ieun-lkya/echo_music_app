@@ -4,6 +4,7 @@ import '../api/music_api.dart';
 import '../stores/music_store.dart';
 import '../components/player_bar.dart';
 import '../components/comment_sheet.dart';
+import '../utils/toast_util.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -101,16 +102,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.pop(sheetContext);
                     try {
                       await MusicApi.addMusicToPlaylist(p['id'], music['id']);
-                      if (sheetContext.mounted) {
-                        ScaffoldMessenger.of(sheetContext).showSnackBar(
-                          const SnackBar(content: Text('已成功加入歌单！')),
-                        );
+                      if (mounted) {
+                        ToastUtil.success(context, '已成功加入歌单！');
                       }
                     } catch (e) {
-                      if (sheetContext.mounted) {
-                        ScaffoldMessenger.of(
-                          sheetContext,
-                        ).showSnackBar(SnackBar(content: Text(e.toString())));
+                      if (mounted) {
+                        ToastUtil.error(context, e.toString());
                       }
                     }
                   },

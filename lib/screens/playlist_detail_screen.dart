@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../api/music_api.dart';
 import '../stores/music_store.dart';
 import '../components/player_bar.dart';
+import '../utils/toast_util.dart';
 
 class PlaylistDetailScreen extends StatefulWidget {
   final int playlistId;
@@ -41,9 +42,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载失败：$e')),
-        );
+        ToastUtil.error(context, '加载失败：$e');
       }
     }
   }
@@ -53,15 +52,13 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       await MusicApi.deleteMusicFromPlaylist(widget.playlistId, musicId);
       if (mounted) {
         _loadPlaylistDetail();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已从歌单中移除')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('已从歌单中移除')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('移除失败：$e')),
-        );
+        ToastUtil.error(context, '移除失败：$e');
       }
     }
   }
@@ -98,18 +95,11 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.music_off,
-              size: 80,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.music_off, size: 80, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               '歌单里还没有歌曲',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -138,8 +128,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             icon: const Icon(Icons.delete_outline, color: Colors.grey),
             onPressed: () => _showRemoveDialog(music),
           ),
-          onTap: () =>
-              context.read<MusicStore>().playPlaylist(_musics, index),
+          onTap: () => context.read<MusicStore>().playPlaylist(_musics, index),
         );
       },
     );

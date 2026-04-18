@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../api/music_api.dart';
 import '../components/player_bar.dart';
 import 'playlist_detail_screen.dart';
+import '../utils/toast_util.dart';
 
 class PlaylistScreen extends StatefulWidget {
   const PlaylistScreen({super.key});
@@ -33,9 +34,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载歌单失败：$e')));
+        ToastUtil.error(context, '加载歌单失败：$e');
       }
     }
   }
@@ -65,15 +64,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                   await MusicApi.createPlaylist(name);
                   _loadPlaylists();
                   if (mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(const SnackBar(content: Text('歌单创建成功！')));
+                    ToastUtil.success(context, '歌单创建成功！');
                   }
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('创建失败：$e')));
+                    ToastUtil.error(context, '创建失败：$e');
                   }
                 }
               }
@@ -103,15 +98,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                 await MusicApi.deletePlaylist(playlist['id']);
                 _loadPlaylists();
                 if (mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('歌单已删除')));
+                  ToastUtil.success(context, '歌单已删除');
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('删除失败：$e')));
+                  ToastUtil.error(context, '删除失败：$e');
                 }
               }
             },

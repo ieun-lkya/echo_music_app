@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../api/music_api.dart';
+import '../utils/toast_util.dart';
 
 class CommentSheet extends StatefulWidget {
   final Map<String, dynamic> music;
@@ -48,9 +49,7 @@ class _CommentSheetState extends State<CommentSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ToastUtil.error(context, e.toString());
       }
     }
   }
@@ -61,14 +60,13 @@ class _CommentSheetState extends State<CommentSheet> {
         await MusicApi.likeComment(commentId);
         setState(() {
           _likedComments.add(commentId);
-          _comments[index]['likeCount'] = (_comments[index]['likeCount'] ?? 0) + 1;
+          _comments[index]['likeCount'] =
+              (_comments[index]['likeCount'] ?? 0) + 1;
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('操作失败：$e')),
-        );
+        ToastUtil.error(context, '操作失败：$e');
       }
     }
   }
@@ -112,11 +110,14 @@ class _CommentSheetState extends State<CommentSheet> {
                               children: [
                                 IconButton(
                                   icon: Icon(
-                                    isLiked ? Icons.favorite : Icons.favorite_border,
+                                    isLiked
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
                                     color: isLiked ? Colors.red : Colors.grey,
                                     size: 20,
                                   ),
-                                  onPressed: () => _toggleLike(commentId, index),
+                                  onPressed: () =>
+                                      _toggleLike(commentId, index),
                                 ),
                                 Text(
                                   '${c['likeCount'] ?? 0}',
