@@ -1,281 +1,54 @@
-第一部分：搞定功能 4 —— 新用户注册 (User Registration)
-目前我们的登录页只有登录，没有注册。我们需要在 user_api.dart 里加上注册接口，并在登录页加一个翻转状态。
+还是有问题啊，后端报错：
+2026-04-18T17:56:09.530+08:00 ERROR 300652 --- [nio-8080-exec-5] c.m.exception.GlobalExceptionHandler     : ====== 系统运行时发生未捕获异常 ======
 
-1. 升级 lib/api/user_api.dart
-打开这个文件，在原有的 login 方法下面，加上 register 方法：
-
-Dart
-// lib/api/user_api.dart 追加代码
-  /// 注册接口 (对应后端 UserController.register)
-  static Future<void> register(String username, String password) async {
-    try {
-      final response = await _dio.post(
-        '/user/register',
-        data: {'username': username, 'password': password}, // 后端 @RequestBody
-      );
-      final resData = response.data;
-      if (resData['code'] != '200' && resData['code'] != 200) {
-        throw Exception(resData['msg'] ?? '注册失败，可能账号已存在');
-      }
-    } catch (e) {
-      throw Exception('网络请求异常: $e');
-    }
-  }
-2. 升级 lib/screens/login_screen.dart
-把你的 LoginScreen 增加一个“注册/登录”切换模式。找到你的 _LoginScreenState，用下面的核心代码替换（主要是加了 _isLoginMode 变量和切换按钮）：
-
-Dart
-// lib/screens/login_screen.dart 核心修改
-  // ... 之前的 controller 代码
-  bool _isLoading = false;
-  bool _isLoginMode = true; // 💥 新增：当前是登录还是注册模式
-
-  void _submit() async {
-    final username = _usernameController.text.trim();
-    final password = _passwordController.text.trim();
-
-    if (username.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请输入账号和密码')));
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      if (_isLoginMode) {
-        // 登录逻辑
-        final token = await UserApi.login(username, password);
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('echo_token', token);
-        if (mounted) context.go('/');
-      } else {
-        // 💥 注册逻辑
-        await UserApi.register(username, password);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('注册成功，请登录!'), backgroundColor: Colors.green));
-        setState(() {
-          _isLoginMode = true; // 注册完自动切回登录模式
-          _passwordController.clear(); // 清空密码框让用户重新输
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(_isLoginMode ? '欢迎回到 Echo' : '加入 Echo 音乐', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 32),
-              TextField(controller: _usernameController, decoration: const InputDecoration(labelText: '账号', border: OutlineInputBorder())),
-              const SizedBox(height: 16),
-              TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: '密码', border: OutlineInputBorder())),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submit,
-                  child: _isLoading ? const CircularProgressIndicator() : Text(_isLoginMode ? '登 录' : '注 册', style: const TextStyle(fontSize: 18)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // 💥 切换模式按钮
-              TextButton(
-                onPressed: () => setState(() => _isLoginMode = !_isLoginMode),
-                child: Text(_isLoginMode ? '没有账号？点击注册' : '已有账号？去登录'),
-              )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-第二部分：搞定功能 3 —— 自定义歌单管理 (Playlist Management)
-你后端的 PlaylistController 提供了 /playlist/list、/playlist/create 和 /playlist/addMusic 这三个接口。
-
-1. 在 lib/api/music_api.dart 中追加歌单接口
-Dart
-// lib/api/music_api.dart 追加以下 3 个方法
-  /// 📂 获取我的歌单
-  static Future<List<dynamic>> getPlaylists() async {
-    try {
-      final response = await _dio.get('/playlist/list', options: await _getAuthOptions());
-      final resData = response.data;
-      if (resData['code'] == '200' || resData['code'] == 200) return resData['data'];
-      return [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// ➕ 创建新歌单
-  static Future<void> createPlaylist(String name) async {
-    try {
-      await _dio.post(
-        '/playlist/create',
-        queryParameters: {'name': name},
-        options: await _getAuthOptions(),
-      );
-    } catch (e) {
-      throw Exception('创建歌单失败: $e');
-    }
-  }
-
-  /// 🎵 把歌曲加入歌单
-  static Future<void> addMusicToPlaylist(int playlistId, int musicId) async {
-    try {
-      final response = await _dio.post(
-        '/playlist/addMusic',
-        queryParameters: {'playlistId': playlistId, 'musicId': musicId},
-        options: await _getAuthOptions(),
-      );
-      final resData = response.data;
-      if (resData['code'] != '200' && resData['code'] != 200) {
-        throw Exception(resData['msg'] ?? '添加失败');
-      }
-    } catch (e) {
-      throw Exception('添加失败: $e');
-    }
-  }
-2. 升级 lib/screens/home_screen.dart (加入侧边栏与收藏功能)
-在移动端，最优雅的歌单交互方式是：点击歌曲列表右侧的 ... 图标，弹出一个底部菜单让你选择加入哪个歌单。同时我们加一个侧边抽屉 (Drawer) 来展示你创建的所有歌单。
-
-修改你的 home_screen.dart：
-
-Dart
-// lib/screens/home_screen.dart
-
-// ... 在 _HomeScreenState 中新增获取歌单的状态
-  List<dynamic> _myPlaylists = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAllData();
-    _fetchPlaylists(); // 💥 初始化时顺便把歌单拉下来
-  }
-
-  Future<void> _fetchPlaylists() async {
-    final list = await MusicApi.getPlaylists();
-    setState(() => _myPlaylists = list);
-  }
-
-  // 💥 新增：弹出收藏到歌单的底部菜单
-  void _showAddToPlaylistSheet(Map<String, dynamic> music) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('将《${music['title']}》加入歌单', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const Divider(),
-              if (_myPlaylists.isEmpty) const Padding(padding: EdgeInsets.all(20), child: Text('你还没有创建任何歌单哦')),
-              ..._myPlaylists.map((p) => ListTile(
-                leading: const Icon(Icons.queue_music),
-                title: Text(p['name']),
-                onTap: () async {
-                  Navigator.pop(context); // 关闭弹窗
-                  try {
-                    await MusicApi.addMusicToPlaylist(p['id'], music['id']);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已成功加入歌单！')));
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                  }
-                },
-              )),
-              // 新建歌单快捷入口
-              ListTile(
-                leading: const Icon(Icons.add),
-                title: const Text('新建歌单...'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showCreatePlaylistDialog();
-                },
-              )
-            ],
-          ),
-        );
-      }
-    );
-  }
-
-  // 💥 新增：创建歌单的弹窗
-  void _showCreatePlaylistDialog() {
-    final TextEditingController nameController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('新建歌单'),
-        content: TextField(controller: nameController, decoration: const InputDecoration(hintText: '输入歌单名称')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
-          FilledButton(
-            onPressed: () async {
-              if (nameController.text.isNotEmpty) {
-                await MusicApi.createPlaylist(nameController.text);
-                _fetchPlaylists(); // 刷新歌单列表
-                if(mounted) Navigator.pop(context);
-              }
-            },
-            child: const Text('创建'),
-          )
-        ],
-      )
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      // 💥 增加一个侧边抽屉用于查看歌单
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blueAccent),
-              child: Text('我的音乐资产', style: TextStyle(color: Colors.white, fontSize: 24)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.add_box),
-              title: const Text('新建歌单'),
-              onTap: () { Navigator.pop(context); _showCreatePlaylistDialog(); },
-            ),
-            const Divider(),
-            ..._myPlaylists.map((p) => ListTile(
-              leading: const Icon(Icons.album),
-              title: Text(p['name']),
-              subtitle: Text('${p['musicCount'] ?? 0} 首歌曲'),
-            )),
-          ],
-        ),
-      ),
-      appBar: AppBar( ... ), // 原来的 AppBar 保持不变
-// ...
-3. 最后，在你的歌曲列表中挂载这个功能
-在 _buildBody 的 ListView.builder 中，把原本简单的右侧操作区，改成带有 ... 的菜单：
-
-Dart
-          // 找到原来的 trailing
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ... 之前的评论图标 ...
-              IconButton(
-                icon: const Icon(Icons.more_vert), // 💥 改成三个点的更多图标
-                onPressed: () => _showAddToPlaylistSheet(music), // 调出加入歌单菜单
-              ),
-            ],
-          ),
+org.springframework.web.bind.MissingServletRequestParameterException: Required request parameter 'userId' for method parameter type Long is not present
+	at org.springframework.web.method.annotation.RequestParamMethodArgumentResolver.handleMissingValueInternal(RequestParamMethodArgumentResolver.java:220) ~[spring-web-6.2.16.jar:6.2.16]
+	at org.springframework.web.method.annotation.RequestParamMethodArgumentResolver.handleMissingValue(RequestParamMethodArgumentResolver.java:196) ~[spring-web-6.2.16.jar:6.2.16]
+	at org.springframework.web.method.annotation.AbstractNamedValueMethodArgumentResolver.resolveArgument(AbstractNamedValueMethodArgumentResolver.java:125) ~[spring-web-6.2.16.jar:6.2.16]
+	at org.springframework.web.method.support.HandlerMethodArgumentResolverComposite.resolveArgument(HandlerMethodArgumentResolverComposite.java:122) ~[spring-web-6.2.16.jar:6.2.16]
+	at org.springframework.web.method.support.InvocableHandlerMethod.getMethodArgumentValues(InvocableHandlerMethod.java:227) ~[spring-web-6.2.16.jar:6.2.16]
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:181) ~[spring-web-6.2.16.jar:6.2.16]
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118) ~[spring-webmvc-6.2.16.jar:6.2.16]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991) ~[spring-webmvc-6.2.16.jar:6.2.16]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896) ~[spring-webmvc-6.2.16.jar:6.2.16]
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87) ~[spring-webmvc-6.2.16.jar:6.2.16]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.2.16.jar:6.2.16]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.2.16.jar:6.2.16]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.2.16.jar:6.2.16]
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914) ~[spring-webmvc-6.2.16.jar:6.2.16]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590) ~[tomcat-embed-core-10.1.52.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.2.16.jar:6.2.16]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.52.jar:6.0]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.52.jar:10.1.52]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.2.16.jar:6.2.16]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.16.jar:6.2.16]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.2.16.jar:6.2.16]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.16.jar:6.2.16]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.2.16.jar:6.2.16]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.16.jar:6.2.16]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1775) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.52.jar:10.1.52]
+	at java.base/java.lang.Thread.run(Thread.java:840) ~[na:na]

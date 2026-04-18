@@ -32,11 +32,20 @@ class _LoginScreenState extends State<LoginScreen> {
       if (_isLoginMode) {
         final userData = await UserApi.login(username, password);
         final token = userData['token'];
+        final user = userData['user'];
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('echo_token', token);
         await prefs.setString('echo_username', username);
-        if (userData['id'] != null) {
-          await prefs.setInt('echo_user_id', userData['id']);
+        if (user != null) {
+          if (user['id'] != null) {
+            await prefs.setInt('echo_user_id', user['id']);
+          }
+          if (user['nickname'] != null) {
+            await prefs.setString('echo_nickname', user['nickname']);
+          }
+          if (user['avatar'] != null) {
+            await prefs.setString('echo_avatar', user['avatar']);
+          }
         }
         if (mounted) {
           ToastUtil.success(context, '🎉 登录成功！');

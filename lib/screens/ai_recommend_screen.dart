@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../api/music_api.dart';
+import '../stores/music_store.dart';
 
 class AiRecommendScreen extends StatefulWidget {
   const AiRecommendScreen({super.key});
@@ -10,7 +12,7 @@ class AiRecommendScreen extends StatefulWidget {
 
 class _AiRecommendScreenState extends State<AiRecommendScreen> {
   final _messageController = TextEditingController();
-  final List<Map<String, String>> _messages = [];
+  final List<Map<String, dynamic>> _messages = [];
   bool _isLoading = false;
 
   Future<void> _sendMessage() async {
@@ -26,9 +28,12 @@ class _AiRecommendScreenState extends State<AiRecommendScreen> {
       final result = await MusicApi.aiRecommend(message);
 
       if (result.isNotEmpty) {
-        final recommendation = result[0]['title'] ?? '抱歉，我没有找到合适的推荐';
         setState(() {
-          _messages.add({'role': 'ai', 'content': '为你推荐：$recommendation'});
+          _messages.add({
+            'role': 'ai',
+            'content': '为你推荐 ${result.length} 首歌曲：',
+            'songs': result,
+          });
         });
       } else {
         setState(() {
@@ -51,7 +56,7 @@ class _AiRecommendScreenState extends State<AiRecommendScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('AI 智能推荐')),
+      appBar: AppBar(title: const Text('AI 智能推荐'), centerTitle: true),
       body: Column(
         children: [
           Expanded(
@@ -68,15 +73,70 @@ class _AiRecommendScreenState extends State<AiRecommendScreen> {
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     padding: const EdgeInsets.all(12),
+                    constraints: const BoxConstraints(maxWidth: 300),
                     decoration: BoxDecoration(
                       color: isUser ? Colors.blueAccent : Colors.grey[300],
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
-                      message['content'] ?? '',
-                      style: TextStyle(
-                        color: isUser ? Colors.white : Colors.black,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          message['content'] ?? '',
+                          style: TextStyle(
+                            color: isUser ? Colors.white : Colors.black,
+                          ),
+                        ),
+                        if (message['songs'] != null) ...[
+                          const SizedBox(height: 8),
+                          ...(message['songs'] as List).map(
+                            (song) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: Image.network(
+                                  song['coverUrl'] ??
+                                      'https://via.placeholder.com/40',
+                                  width: 40,
+                                  height: 40,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(Icons.music_note, size: 40),
+                                ),
+                              ),
+                              title: Text(
+                                song['title'] ?? '未知歌曲',
+                                style: TextStyle(
+                                  color: isUser ? Colors.white : Colors.black,
+                                  fontSize: 14,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                song['artist'] ?? '未知歌手',
+                                style: TextStyle(
+                                  color: isUser
+                                      ? Colors.white70
+                                      : Colors.black54,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              onTap: () {
+                                final songs = message['songs'] as List;
+                                final idx = songs.indexOf(song);
+                                context.read<MusicStore>().playPlaylist(
+                                  songs,
+                                  idx,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 );
@@ -106,7 +166,7 @@ class _AiRecommendScreenState extends State<AiRecommendScreen> {
                 IconButton(
                   icon: const Icon(Icons.send),
                   color: Colors.blueAccent,
-                  onPressed: _sendMessage,
+                  onPressed: _isLoading ? null : _sendMessage,
                 ),
               ],
             ),

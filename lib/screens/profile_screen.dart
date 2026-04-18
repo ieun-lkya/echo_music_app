@@ -3,6 +3,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../utils/toast_util.dart';
 import 'play_history_screen.dart';
+import 'my_favorites_screen.dart';
+import 'edit_profile_screen.dart';
+import 'message_list_screen.dart';
+import 'user_search_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -13,6 +17,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   String _username = '';
+  String _nickname = '';
+  String _avatar = '';
   bool _isLoading = true;
 
   @override
@@ -24,8 +30,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadUserInfo() async {
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('echo_username') ?? '用户';
+    final nickname = prefs.getString('echo_nickname') ?? '';
+    final avatar = prefs.getString('echo_avatar') ?? '';
     setState(() {
       _username = username;
+      _nickname = nickname;
+      _avatar = avatar;
       _isLoading = false;
     });
   }
@@ -79,43 +89,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 36,
-            backgroundColor: Colors.blueAccent,
-            child: Text(
-              _username.isNotEmpty ? _username[0].toUpperCase() : 'U',
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+    return GestureDetector(
+      onTap: () async {
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+        );
+        if (result == true) {
+          _loadUserInfo();
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 36,
+              backgroundImage: _avatar.isNotEmpty
+                  ? NetworkImage(_avatar)
+                  : null,
+              backgroundColor: Colors.blueAccent,
+              child: _avatar.isEmpty
+                  ? Text(
+                      _nickname.isNotEmpty
+                          ? _nickname[0].toUpperCase()
+                          : (_username.isNotEmpty
+                                ? _username[0].toUpperCase()
+                                : 'U'),
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _nickname.isNotEmpty ? _nickname : _username,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Echo Music 用户',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _username,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Echo Music 用户',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ),
-        ],
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
+        ),
       ),
     );
   }
@@ -123,6 +154,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildMenuSection() {
     return Column(
       children: [
+        _buildMenuItem(
+          icon: Icons.message_outlined,
+          title: '我的消息',
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MessageListScreen()),
+            );
+          },
+        ),
         _buildMenuItem(
           icon: Icons.history,
           title: '播放历史',
@@ -137,7 +178,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: Icons.favorite_border,
           title: '我的收藏',
           onTap: () {
-            ToastUtil.info(context, '收藏功能开发中...');
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MyFavoritesScreen()),
+            );
+          },
+        ),
+        _buildMenuItem(
+          icon: Icons.person_outline,
+          title: '编辑资料',
+          onTap: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+            );
+            if (result == true) {
+              _loadUserInfo();
+            }
+          },
+        ),
+        _buildMenuItem(
+          icon: Icons.people_outline,
+          title: '搜索用户',
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const UserSearchScreen()),
+            );
           },
         ),
         _buildMenuItem(
@@ -156,7 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               applicationName: 'Echo Music',
               applicationVersion: '1.0.0',
               applicationIcon: const Icon(Icons.music_note, size: 48),
-              children: [const Text('一个基于 Flutter + Spring Boot 的音乐推荐系统')],
+              children: const [Text('一个基于 Flutter + Spring Boot 的音乐推荐系统')],
             );
           },
         ),
