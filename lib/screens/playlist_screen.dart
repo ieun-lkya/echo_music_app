@@ -25,6 +25,17 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     setState(() => _isLoading = true);
     try {
       final list = await MusicApi.getPlaylists();
+
+      // 为每个歌单获取实际的歌曲数量
+      for (var playlist in list) {
+        try {
+          final musics = await MusicApi.getPlaylistDetail(playlist['id']);
+          playlist['musicCount'] = musics.length;
+        } catch (e) {
+          playlist['musicCount'] = 0;
+        }
+      }
+
       if (mounted) {
         setState(() {
           _playlists = list;
