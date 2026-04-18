@@ -153,12 +153,18 @@ class MusicApi {
       final userId = await _getUserId();
       if (userId == null) throw Exception('用户未登录');
 
-      await _dio.post(
+      final response = await _dio.post(
         '/playlist/create',
         data: {'name': name, 'userId': userId},
         options: await _getAuthOptions(),
       );
+
+      final resData = response.data;
+      if (resData['code'] != '200' && resData['code'] != 200) {
+        throw Exception(resData['msg'] ?? '创建失败');
+      }
     } catch (e) {
+      if (e is Exception) rethrow;
       throw Exception('创建歌单失败: $e');
     }
   }
