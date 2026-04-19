@@ -205,11 +205,7 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       body: Column(
         children: [
-          Expanded(
-            child: ListView(
-              children: [_buildQuickAccessSection(), _buildBody()],
-            ),
-          ),
+          Expanded(child: _buildBody()),
           const PlayerBar(),
         ],
       ),
@@ -315,13 +311,31 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     if (_musicList.isEmpty) {
-      return const Center(child: Text('当前曲库空空如也~'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildQuickAccessSection(),
+            const SizedBox(height: 40),
+            Icon(Icons.music_note, size: 80, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              '当前曲库空空如也~',
+              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
     }
 
     return ListView.builder(
-      itemCount: _musicList.length,
+      itemCount: _musicList.length + 1,
       itemBuilder: (context, index) {
-        final music = _musicList[index];
+        if (index == 0) {
+          return _buildQuickAccessSection();
+        }
+
+        final music = _musicList[index - 1];
 
         return ListTile(
           leading: ClipRRect(
@@ -357,7 +371,7 @@ class _HomeScreenState extends State<HomeScreen>
             ],
           ),
           onTap: () =>
-              context.read<MusicStore>().playPlaylist(_musicList, index),
+              context.read<MusicStore>().playPlaylist(_musicList, index - 1),
         );
       },
     );
