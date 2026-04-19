@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../api/music_api.dart';
 import '../components/player_bar.dart';
 import 'playlist_detail_screen.dart';
+import 'my_favorites_screen.dart';
 import '../utils/toast_util.dart';
 
 class PlaylistScreen extends StatefulWidget {
@@ -158,8 +159,49 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_playlists.isEmpty) {
-      return Center(
+    return ListView(
+      children: [
+        _buildFavoritesCard(),
+        if (_playlists.isEmpty) _buildEmptyState() else _buildPlaylistsList(),
+      ],
+    );
+  }
+
+  Widget _buildFavoritesCard() {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+      child: ListTile(
+        leading: Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Colors.redAccent, Colors.pinkAccent],
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.favorite, color: Colors.white, size: 32),
+        ),
+        title: const Text(
+          '我的收藏',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: const Text('我喜欢的音乐', style: TextStyle(color: Colors.grey)),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MyFavoritesScreen()),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -182,10 +224,14 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
             ),
           ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
+  Widget _buildPlaylistsList() {
     return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(8),
       itemCount: _playlists.length,
       itemBuilder: (context, index) {

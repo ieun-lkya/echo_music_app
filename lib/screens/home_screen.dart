@@ -5,6 +5,8 @@ import '../stores/music_store.dart';
 import '../components/player_bar.dart';
 import '../components/comment_sheet.dart';
 import '../utils/toast_util.dart';
+import 'echo_fm_screen.dart';
+import 'sleep_mode_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -203,9 +205,97 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       body: Column(
         children: [
-          Expanded(child: _buildBody()),
+          Expanded(
+            child: ListView(
+              children: [_buildQuickAccessSection(), _buildBody()],
+            ),
+          ),
           const PlayerBar(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAccessSection() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildQuickAccessCard(
+              icon: Icons.radio,
+              title: 'Echo FM',
+              subtitle: '智能电台',
+              gradient: const LinearGradient(
+                colors: [Colors.orange, Colors.deepOrange],
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EchoFmScreen()),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildQuickAccessCard(
+              icon: Icons.nightlight,
+              title: '助眠模式',
+              subtitle: '放松身心',
+              gradient: const LinearGradient(
+                colors: [Colors.indigo, Colors.purple],
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SleepModeScreen()),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAccessCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Gradient gradient,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.white, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.8),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

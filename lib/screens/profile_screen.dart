@@ -3,12 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../utils/toast_util.dart';
 import 'play_history_screen.dart';
-import 'my_favorites_screen.dart';
 import 'edit_profile_screen.dart';
 import 'message_list_screen.dart';
 import 'user_search_screen.dart';
-import 'echo_fm_screen.dart';
-import 'sleep_mode_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -157,52 +154,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       children: [
         _buildMenuItem(
-          icon: Icons.radio,
-          title: 'Echo FM',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const EchoFmScreen()),
-            );
-          },
-        ),
-        _buildMenuItem(
-          icon: Icons.nightlight,
-          title: '助眠模式',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SleepModeScreen()),
-            );
-          },
-        ),
-        _buildMenuItem(
-          icon: Icons.message_outlined,
-          title: '我的消息',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MessageListScreen()),
-            );
-          },
-        ),
-        _buildMenuItem(
           icon: Icons.history,
           title: '播放历史',
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const PlayHistoryScreen()),
-            );
-          },
-        ),
-        _buildMenuItem(
-          icon: Icons.favorite_border,
-          title: '我的收藏',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MyFavoritesScreen()),
             );
           },
         ),
@@ -217,6 +174,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (result == true) {
               _loadUserInfo();
             }
+          },
+        ),
+        _buildMenuItem(
+          icon: Icons.message_outlined,
+          title: '我的消息',
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MessageListScreen()),
+            );
           },
         ),
         _buildMenuItem(
