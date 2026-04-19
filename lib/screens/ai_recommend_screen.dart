@@ -442,9 +442,13 @@ class _QuantumPlaylistTab extends StatefulWidget {
   State<_QuantumPlaylistTab> createState() => _QuantumPlaylistTabState();
 }
 
-class _QuantumPlaylistTabState extends State<_QuantumPlaylistTab> {
+class _QuantumPlaylistTabState extends State<_QuantumPlaylistTab>
+    with AutomaticKeepAliveClientMixin {
   List<dynamic> _quantumPlaylists = [];
   bool _isLoading = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -478,6 +482,7 @@ class _QuantumPlaylistTabState extends State<_QuantumPlaylistTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
