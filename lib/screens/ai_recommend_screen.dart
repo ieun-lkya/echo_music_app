@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../api/music_api.dart';
 import '../stores/music_store.dart';
+import '../components/player_bar.dart';
 import '../utils/toast_util.dart';
 
 class AiRecommendScreen extends StatefulWidget {
@@ -11,7 +12,59 @@ class AiRecommendScreen extends StatefulWidget {
   State<AiRecommendScreen> createState() => _AiRecommendScreenState();
 }
 
-class _AiRecommendScreenState extends State<AiRecommendScreen> {
+class _AiRecommendScreenState extends State<AiRecommendScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('AI 智能推荐'),
+        centerTitle: true,
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(icon: Icon(Icons.chat), text: '对话推荐'),
+            Tab(icon: Icon(Icons.auto_awesome), text: '量子歌单'),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: const [_ChatRecommendTab(), _QuantumPlaylistTab()],
+            ),
+          ),
+          const PlayerBar(),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChatRecommendTab extends StatefulWidget {
+  const _ChatRecommendTab();
+
+  @override
+  State<_ChatRecommendTab> createState() => _ChatRecommendTabState();
+}
+
+class _ChatRecommendTabState extends State<_ChatRecommendTab> {
   final _messageController = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
   bool _isLoading = false;
@@ -66,19 +119,16 @@ class _AiRecommendScreenState extends State<AiRecommendScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('AI 智能推荐'), centerTitle: true),
-      body: Column(
-        children: [
-          Expanded(child: _buildMessageList()),
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: CircularProgressIndicator(),
-            ),
-          _buildInputArea(),
-        ],
-      ),
+    return Column(
+      children: [
+        Expanded(child: _buildMessageList()),
+        if (_isLoading)
+          const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: CircularProgressIndicator(),
+          ),
+        _buildInputArea(),
+      ],
     );
   }
 
@@ -290,14 +340,46 @@ class _AiRecommendScreenState extends State<AiRecommendScreen> {
                 ],
               ),
             ),
-            Icon(
-              Icons.play_circle_outline,
-              color: isUser ? Colors.white70 : Colors.blueAccent,
-              size: 24,
+            IconButton(
+              icon: Icon(
+                Icons.favorite_border,
+                color: isUser ? Colors.white70 : Colors.grey[600],
+                size: 20,
+              ),
+              onPressed: () async {
+                try {
+                  await MusicApi.likeMusic(song['id']);
+                  if (mounted) {
+                    ToastUtil.success(context, '已收藏');
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ToastUtil.error(context, '收藏失败：$e');
+                  }
+                }
+              },
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.playlist_add,
+                color: isUser ? Colors.white70 : Colors.blueAccent,
+                size: 20,
+              ),
+              onPressed: () => _showAddSingleToPlaylistDialog(song),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showAddSingleToPlaylistDialog(Map<String, dynamic> song) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => _AddSingleToPlaylistSheet(song: song),
     );
   }
 
@@ -350,6 +432,337 @@ class _AiRecommendScreenState extends State<AiRecommendScreen> {
   void dispose() {
     _messageController.dispose();
     super.dispose();
+  }
+}
+
+class _QuantumPlaylistTab extends StatefulWidget {
+  const _QuantumPlaylistTab();
+
+  @override
+  State<_QuantumPlaylistTab> createState() => _QuantumPlaylistTabState();
+}
+
+class _QuantumPlaylistTabState extends State<_QuantumPlaylistTab> {
+  List<dynamic> _quantumPlaylists = [];
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuantumPlaylists();
+  }
+
+  Future<void> _loadQuantumPlaylists() async {
+    setState(() => _isLoading = true);
+    try {
+      final playlists = await MusicApi.generateAiPlaylists();
+      if (mounted) {
+        setState(() {
+          _quantumPlaylists = playlists;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ToastUtil.error(context, '加载失败：$e');
+      }
+    }
+  }
+
+  void _playPlaylist(List<dynamic> songs) {
+    if (songs.isNotEmpty) {
+      context.read<MusicStore>().playPlaylist(songs, 0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_quantumPlaylists.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.auto_awesome,
+              size: 80,
+              color: Colors.blueAccent.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '暂无量子歌单',
+              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _loadQuantumPlaylists,
+              icon: const Icon(Icons.refresh),
+              label: const Text('生成歌单'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadQuantumPlaylists,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _quantumPlaylists.length,
+        itemBuilder: (context, index) {
+          final playlist = _quantumPlaylists[index];
+          final songs = List<dynamic>.from(playlist['songs'] ?? []);
+          final name = playlist['name'] ?? 'AI 推荐歌单';
+          final description = playlist['description'] ?? '';
+          final tags = playlist['tags'] ?? '';
+          final basis = playlist['basis'] ?? '';
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: ExpansionTile(
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: songs.isNotEmpty
+                    ? Image.network(
+                        songs[0]['coverUrl'] ??
+                            'https://via.placeholder.com/50',
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.music_note, size: 50),
+                      )
+                    : const Icon(Icons.music_note, size: 50),
+              ),
+              title: Text(
+                name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (description.isNotEmpty) Text(description),
+                  if (tags.isNotEmpty)
+                    Text(
+                      '标签：$tags',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  if (basis.isNotEmpty)
+                    Text(
+                      '类型：$basis',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                ],
+              ),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${songs.length} 首歌曲',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: songs.isEmpty
+                            ? null
+                            : () => _playPlaylist(songs),
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('播放全部'),
+                      ),
+                    ],
+                  ),
+                ),
+                ...songs.map(
+                  (song) => ListTile(
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Image.network(
+                        song['coverUrl'] ?? 'https://via.placeholder.com/40',
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.music_note, size: 40),
+                      ),
+                    ),
+                    title: Text(song['title'] ?? '未知歌曲'),
+                    subtitle: Text(song['artist'] ?? '未知歌手'),
+                    onTap: () {
+                      context.read<MusicStore>().playPlaylist(
+                        songs,
+                        songs.indexOf(song),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _AddSingleToPlaylistSheet extends StatefulWidget {
+  final Map<String, dynamic> song;
+
+  const _AddSingleToPlaylistSheet({required this.song});
+
+  @override
+  State<_AddSingleToPlaylistSheet> createState() =>
+      _AddSingleToPlaylistSheetState();
+}
+
+class _AddSingleToPlaylistSheetState extends State<_AddSingleToPlaylistSheet> {
+  List<dynamic> _playlists = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlaylists();
+  }
+
+  Future<void> _loadPlaylists() async {
+    try {
+      final list = await MusicApi.getPlaylists();
+      if (mounted) {
+        setState(() {
+          _playlists = list;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ToastUtil.error(context, '加载歌单失败：$e');
+      }
+    }
+  }
+
+  Future<void> _addToPlaylist(int playlistId) async {
+    try {
+      await MusicApi.addMusicToPlaylist(playlistId, widget.song['id']);
+      if (mounted) {
+        Navigator.pop(context);
+        ToastUtil.success(context, '已添加到歌单');
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastUtil.error(context, '添加失败：$e');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.network(
+                  widget.song['coverUrl'] ?? 'https://via.placeholder.com/40',
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(Icons.music_note, size: 24),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.song['title'] ?? '未知歌曲',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      widget.song['artist'] ?? '未知歌手',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 24),
+          const Text(
+            '选择歌单',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator())
+          else if (_playlists.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  children: [
+                    Icon(Icons.queue_music, size: 48, color: Colors.grey[400]),
+                    const SizedBox(height: 8),
+                    Text('还没有歌单', style: TextStyle(color: Colors.grey[600])),
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              itemCount: _playlists.length,
+              itemBuilder: (context, index) {
+                final playlist = _playlists[index];
+                return ListTile(
+                  leading: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Colors.blueAccent, Colors.purpleAccent],
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.queue_music, color: Colors.white),
+                  ),
+                  title: Text(playlist['name'] ?? '未命名歌单'),
+                  subtitle: Text('${playlist['musicCount'] ?? 0} 首歌曲'),
+                  onTap: () => _addToPlaylist(playlist['id']),
+                );
+              },
+            ),
+        ],
+      ),
+    );
   }
 }
 
