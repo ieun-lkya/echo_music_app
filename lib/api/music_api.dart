@@ -111,9 +111,38 @@ class MusicApi {
     return _audioCacheService.cachedSongs(songs);
   }
 
+  static Future<List<dynamic>> _fetchRemoteMusicList() async {
+    final response = await _dio.get(
+      '/music/list',
+      options: await _getAuthOptions(),
+    );
+    final resData = response.data;
+    if (resData['code'] == '200' || resData['code'] == 200) {
+      final songs = List<dynamic>.from(resData['data'] ?? []);
+      await _saveCachedMusicList(songs);
+      unawaited(_audioCacheService.cacheSongs(songs));
+      return songs;
+    }
+    throw Exception(resData['msg'] ?? 'Fetch music failed');
+  }
+
+  static Future<void> _refreshRemoteMusicListSilently() async {
+    try {
+      await _fetchRemoteMusicList();
+    } catch (e) {
+      debugPrint('Refresh music cache failed: $e');
+    }
+  }
+
   static Future<List<dynamic>> getMusicList() async {
     if (ApiConstants.useLocalMusicLibrary) {
       return LocalMusicLibrary.loadSongs();
+    }
+
+    final cachedSongs = await _loadCachedMusicList();
+    if (cachedSongs.isNotEmpty) {
+      unawaited(_refreshRemoteMusicListSilently());
+      return cachedSongs;
     }
 
     try {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../screens/home_screen.dart';
+
 import '../screens/ai_recommend_screen.dart';
+import '../screens/cached_music_screen.dart';
+import '../screens/home_screen.dart';
 import '../screens/playlist_screen.dart';
 import '../screens/profile_screen.dart';
 
@@ -16,6 +18,7 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _pages = const [
     HomeScreen(),
+    CachedMusicScreen(),
     AiRecommendScreen(),
     PlaylistScreen(),
     ProfileScreen(),
@@ -36,6 +39,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
             label: '首页',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.offline_pin_outlined),
+            activeIcon: Icon(Icons.offline_pin),
+            label: '缓存',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.smart_toy_outlined),
