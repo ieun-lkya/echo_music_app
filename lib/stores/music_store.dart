@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../services/audio_cache_service.dart';
 
 class MusicStore extends ChangeNotifier {
   final AudioPlayer audioPlayer = AudioPlayer();
+  final AudioCacheService _audioCacheService = AudioCacheService();
 
   Map<String, dynamic>? currentSong;
   List<dynamic> currentPlaylist = [];
@@ -32,9 +34,24 @@ class MusicStore extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final audioUrl = currentSong!['audioUrl'] ?? currentSong!['audio_url'];
-      if (audioUrl != null && audioUrl.isNotEmpty) {
-        await audioPlayer.setUrl(audioUrl);
+      final source = _audioCacheService.audioUrlFor(currentSong!);
+      if (source != null) {
+        if (source.startsWith('assets/')) {
+          await audioPlayer.setAsset(source);
+        } else {
+          final cachedPath = await _audioCacheService.cachedPathFor(
+            currentSong!,
+          );
+          final playablePath =
+              cachedPath ??
+              await _audioCacheService.cacheFromSong(currentSong!);
+
+          if (playablePath != null) {
+            await audioPlayer.setFilePath(playablePath);
+          } else {
+            await audioPlayer.setUrl(source);
+          }
+        }
         audioPlayer.play();
       }
     } catch (e) {

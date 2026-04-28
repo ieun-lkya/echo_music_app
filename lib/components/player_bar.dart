@@ -5,6 +5,7 @@ import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import '../stores/music_store.dart';
 import '../api/music_api.dart';
 import '../utils/toast_util.dart';
+import 'music_cover.dart';
 
 class PlayerBar extends StatefulWidget {
   const PlayerBar({super.key});
@@ -78,17 +79,7 @@ class _PlayerBarState extends State<PlayerBar> {
           const SizedBox(height: 8),
           Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  currentSong['coverUrl'] ?? 'https://via.placeholder.com/50',
-                  width: 48,
-                  height: 48,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.music_note, size: 48),
-                ),
-              ),
+              MusicCover(song: currentSong, size: 48, radius: 8),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

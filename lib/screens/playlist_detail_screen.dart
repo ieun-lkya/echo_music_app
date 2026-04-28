@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../api/music_api.dart';
 import '../stores/music_store.dart';
 import '../components/player_bar.dart';
+import '../components/music_cover.dart';
 import '../utils/toast_util.dart';
 
 class PlaylistDetailScreen extends StatefulWidget {
@@ -111,17 +112,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       itemBuilder: (context, index) {
         final music = _musics[index];
         return ListTile(
-          leading: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: Image.network(
-              music['coverUrl'] ?? 'https://via.placeholder.com/50',
-              width: 50,
-              height: 50,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  const Icon(Icons.music_note, size: 50),
-            ),
-          ),
+          leading: MusicCover(song: music),
           title: Text(music['title'] ?? '未知歌曲'),
           subtitle: Text(music['artist'] ?? '未知歌手'),
           trailing: IconButton(

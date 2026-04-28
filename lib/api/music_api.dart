@@ -1,10 +1,15 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_constants.dart';
+import '../data/local_music_library.dart';
+import '../services/audio_cache_service.dart';
 
 class MusicApi {
+  static final AudioCacheService _audioCacheService = AudioCacheService();
+
   static final Dio _dio = Dio(
     BaseOptions(
       baseUrl: ApiConstants.baseUrl,
@@ -58,7 +63,54 @@ class MusicApi {
     return null;
   }
 
+  static Future<List<Map<String, dynamic>>> _loadLocalPlaylists() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('local_music_playlists') ?? '[]';
+    final decoded = jsonDecode(raw);
+    if (decoded is! List) return <Map<String, dynamic>>[];
+    return decoded
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  static Future<void> _saveLocalPlaylists(
+    List<Map<String, dynamic>> playlists,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('local_music_playlists', jsonEncode(playlists));
+  }
+
+  static Future<List<dynamic>> _loadCachedMusicList() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('cached_music_list') ?? '[]';
+    final decoded = jsonDecode(raw);
+    return decoded is List ? decoded : <dynamic>[];
+  }
+
+  static Future<void> _saveCachedMusicList(List<dynamic> songs) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('cached_music_list', jsonEncode(songs));
+  }
+
+  static Future<List<dynamic>> _searchCachedMusic(String keyword) async {
+    final normalized = keyword.trim().toLowerCase();
+    final songs = await _loadCachedMusicList();
+    if (normalized.isEmpty) return songs;
+
+    return songs.where((song) {
+      if (song is! Map) return false;
+      final title = (song['title'] ?? '').toString().toLowerCase();
+      final artist = (song['artist'] ?? '').toString().toLowerCase();
+      return title.contains(normalized) || artist.contains(normalized);
+    }).toList();
+  }
+
   static Future<List<dynamic>> getMusicList() async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      return LocalMusicLibrary.loadSongs();
+    }
+
     try {
       final response = await _dio.get(
         '/music/list',
@@ -66,16 +118,25 @@ class MusicApi {
       );
       final resData = response.data;
       if (resData['code'] == '200' || resData['code'] == 200) {
-        return resData['data'];
+        final songs = List<dynamic>.from(resData['data'] ?? []);
+        await _saveCachedMusicList(songs);
+        unawaited(_audioCacheService.cacheSongs(songs));
+        return songs;
       } else {
         throw Exception(resData['msg'] ?? '获取音乐失败');
       }
     } catch (e) {
+      final cachedSongs = await _loadCachedMusicList();
+      if (cachedSongs.isNotEmpty) return cachedSongs;
       throw Exception('获取列表失败：$e');
     }
   }
 
   static Future<List<dynamic>> searchMusic(String keyword) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      return LocalMusicLibrary.search(keyword);
+    }
+
     try {
       final response = await _dio.get(
         '/music/search',
@@ -89,11 +150,17 @@ class MusicApi {
         throw Exception(resData['msg'] ?? '搜索失败');
       }
     } catch (e) {
+      final cachedSongs = await _searchCachedMusic(keyword);
+      if (cachedSongs.isNotEmpty) return cachedSongs;
       throw Exception('搜索失败：$e');
     }
   }
 
   static Future<List<dynamic>> getComments(int musicId) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      return [];
+    }
+
     try {
       final response = await _dio.get(
         '/comment/list/$musicId',
@@ -112,6 +179,10 @@ class MusicApi {
   }
 
   static Future<void> addComment(int musicId, String content) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      throw Exception('本地曲库模式暂不支持评论');
+    }
+
     try {
       final response = await _dio.post(
         '/comment/add',
@@ -129,6 +200,10 @@ class MusicApi {
   }
 
   static Future<List<dynamic>> aiRecommend(String scene) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      return LocalMusicLibrary.recommend(scene);
+    }
+
     try {
       final response = await _dio.get(
         '/music/ai/recommend',
@@ -147,6 +222,24 @@ class MusicApi {
   }
 
   static Future<List<dynamic>> getPlaylists() async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      final songs = await LocalMusicLibrary.loadSongs();
+      final playlists = await _loadLocalPlaylists();
+      return playlists.map((playlist) {
+        final musicIds = List<dynamic>.from(playlist['musicIds'] ?? []);
+        final firstSong = songs.cast<Map>().firstWhere(
+          (song) => musicIds.contains(song['id']),
+          orElse: () => {},
+        );
+        return {
+          'id': playlist['id'],
+          'name': playlist['name'],
+          'musicCount': musicIds.length,
+          'coverUrl': firstSong['coverUrl'],
+        };
+      }).toList();
+    }
+
     try {
       final userId = await _getUserId();
       if (userId == null) return [];
@@ -168,6 +261,28 @@ class MusicApi {
   }
 
   static Future<void> createPlaylist(String name) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      final playlists = await _loadLocalPlaylists();
+      final nextId = playlists.isEmpty
+          ? 1
+          : playlists
+                    .map(
+                      (item) => item['id'] is int
+                          ? item['id'] as int
+                          : int.tryParse(item['id'].toString()) ?? 0,
+                    )
+                    .reduce((a, b) => a > b ? a : b) +
+                1;
+      playlists.add({
+        'id': nextId,
+        'name': name,
+        'musicIds': <int>[],
+        'createTime': DateTime.now().toIso8601String(),
+      });
+      await _saveLocalPlaylists(playlists);
+      return;
+    }
+
     try {
       final userId = await _getUserId();
       if (userId == null) throw Exception('用户未登录');
@@ -189,6 +304,23 @@ class MusicApi {
   }
 
   static Future<void> addMusicToPlaylist(int playlistId, int musicId) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      final playlists = await _loadLocalPlaylists();
+      final playlist = playlists.firstWhere(
+        (item) => item['id'] == playlistId,
+        orElse: () => <String, dynamic>{},
+      );
+      if (playlist.isEmpty) throw Exception('歌单不存在');
+
+      final musicIds = List<dynamic>.from(playlist['musicIds'] ?? []);
+      if (!musicIds.contains(musicId)) {
+        musicIds.add(musicId);
+      }
+      playlist['musicIds'] = musicIds;
+      await _saveLocalPlaylists(playlists);
+      return;
+    }
+
     try {
       final response = await _dio.post(
         '/playlist/addMusic',
@@ -205,6 +337,19 @@ class MusicApi {
   }
 
   static Future<List<dynamic>> getPlaylistDetail(int playlistId) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      final playlists = await _loadLocalPlaylists();
+      final playlist = playlists.firstWhere(
+        (item) => item['id'] == playlistId,
+        orElse: () => <String, dynamic>{},
+      );
+      if (playlist.isEmpty) return [];
+
+      final musicIds = List<dynamic>.from(playlist['musicIds'] ?? []);
+      final songs = await LocalMusicLibrary.loadSongs();
+      return songs.where((song) => musicIds.contains(song['id'])).toList();
+    }
+
     try {
       final response = await _dio.get(
         '/playlist/musicList',
@@ -226,6 +371,21 @@ class MusicApi {
     int playlistId,
     int musicId,
   ) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      final playlists = await _loadLocalPlaylists();
+      final playlist = playlists.firstWhere(
+        (item) => item['id'] == playlistId,
+        orElse: () => <String, dynamic>{},
+      );
+      if (playlist.isEmpty) return;
+
+      final musicIds = List<dynamic>.from(playlist['musicIds'] ?? []);
+      musicIds.remove(musicId);
+      playlist['musicIds'] = musicIds;
+      await _saveLocalPlaylists(playlists);
+      return;
+    }
+
     try {
       final response = await _dio.delete(
         '/playlist/delete',
@@ -242,6 +402,13 @@ class MusicApi {
   }
 
   static Future<void> deletePlaylist(int playlistId) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      final playlists = await _loadLocalPlaylists();
+      playlists.removeWhere((item) => item['id'] == playlistId);
+      await _saveLocalPlaylists(playlists);
+      return;
+    }
+
     try {
       final response = await _dio.delete(
         '/playlist/delete',
@@ -258,6 +425,17 @@ class MusicApi {
   }
 
   static Future<void> likeMusic(int musicId) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      final prefs = await SharedPreferences.getInstance();
+      final likes = prefs.getStringList('local_music_likes') ?? <String>[];
+      final id = musicId.toString();
+      if (!likes.contains(id)) {
+        likes.add(id);
+        await prefs.setStringList('local_music_likes', likes);
+      }
+      return;
+    }
+
     try {
       final userId = await _getUserId();
       if (userId == null) throw Exception('用户未登录');
@@ -277,6 +455,14 @@ class MusicApi {
   }
 
   static Future<void> unlikeMusic(int musicId) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      final prefs = await SharedPreferences.getInstance();
+      final likes = prefs.getStringList('local_music_likes') ?? <String>[];
+      likes.remove(musicId.toString());
+      await prefs.setStringList('local_music_likes', likes);
+      return;
+    }
+
     try {
       final userId = await _getUserId();
       if (userId == null) throw Exception('用户未登录');
@@ -296,6 +482,16 @@ class MusicApi {
   }
 
   static Future<List<dynamic>> getMyLikes() async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      final prefs = await SharedPreferences.getInstance();
+      final likes = prefs.getStringList('local_music_likes') ?? <String>[];
+      final songs = await LocalMusicLibrary.loadSongs();
+      return songs.where((song) {
+        final id = (song['id'] ?? '').toString();
+        return likes.contains(id);
+      }).toList();
+    }
+
     try {
       final userId = await _getUserId();
       if (userId == null) return [];
@@ -317,6 +513,10 @@ class MusicApi {
   }
 
   static Future<void> likeComment(int commentId) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      return;
+    }
+
     try {
       final response = await _dio.post(
         '/comment/like/$commentId',
@@ -332,6 +532,10 @@ class MusicApi {
   }
 
   static Future<List<dynamic>> getTopMusic() async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      return LocalMusicLibrary.top();
+    }
+
     try {
       final response = await _dio.get(
         '/music/top',
@@ -349,6 +553,10 @@ class MusicApi {
   }
 
   static Future<List<dynamic>> getMusicByArtist(String artist) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      return LocalMusicLibrary.byArtist(artist);
+    }
+
     try {
       final response = await _dio.get(
         '/music/artist',
@@ -367,6 +575,10 @@ class MusicApi {
   }
 
   static Future<void> incrementPlayCount(int musicId) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      return;
+    }
+
     try {
       await _dio.post('/music/play/$musicId', options: await _getAuthOptions());
     } catch (e) {
@@ -375,6 +587,10 @@ class MusicApi {
   }
 
   static Future<String?> getArtistBio(String artistName) async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      return null;
+    }
+
     try {
       final response = await _dio.get(
         '/music/ai/artist/bio',
@@ -393,6 +609,10 @@ class MusicApi {
   }
 
   static Future<List<dynamic>> generateAiPlaylists() async {
+    if (ApiConstants.useLocalMusicLibrary) {
+      return LocalMusicLibrary.generatePlaylists();
+    }
+
     try {
       final response = await _dio.get(
         '/music/ai/generatePlaylists',

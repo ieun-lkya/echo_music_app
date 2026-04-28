@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../api/music_api.dart';
 import '../stores/music_store.dart';
 import '../components/player_bar.dart';
+import '../components/music_cover.dart';
 import '../utils/toast_util.dart';
 
 class EchoFmScreen extends StatefulWidget {
@@ -138,17 +139,7 @@ class _EchoFmScreenState extends State<EchoFmScreen> {
           leading: Stack(
             alignment: Alignment.center,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: Image.network(
-                  song['coverUrl'] ?? 'https://via.placeholder.com/50',
-                  width: 50,
-                  height: 50,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.music_note, size: 50),
-                ),
-              ),
+              MusicCover(song: song),
               if (isPlaying)
                 Container(
                   width: 50,

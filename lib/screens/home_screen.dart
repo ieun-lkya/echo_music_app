@@ -4,6 +4,7 @@ import '../api/music_api.dart';
 import '../stores/music_store.dart';
 import '../components/player_bar.dart';
 import '../components/comment_sheet.dart';
+import '../components/music_cover.dart';
 import '../utils/toast_util.dart';
 import 'echo_fm_screen.dart';
 import 'sleep_mode_screen.dart';
@@ -338,17 +339,7 @@ class _HomeScreenState extends State<HomeScreen>
         final music = _musicList[index - 1];
 
         return ListTile(
-          leading: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: Image.network(
-              music['coverUrl'] ?? 'https://via.placeholder.com/50',
-              width: 50,
-              height: 50,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  const Icon(Icons.music_note, size: 50),
-            ),
-          ),
+          leading: MusicCover(song: music),
           title: Text(music['title'] ?? '未知歌曲'),
           subtitle: Text(music['artist'] ?? '未知歌手'),
           trailing: Row(
