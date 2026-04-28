@@ -6,6 +6,7 @@ import '../components/player_bar.dart';
 import '../components/comment_sheet.dart';
 import '../components/music_cover.dart';
 import '../utils/toast_util.dart';
+import 'cached_music_screen.dart';
 import 'echo_fm_screen.dart';
 import 'sleep_mode_screen.dart';
 
@@ -230,6 +231,23 @@ class _HomeScreenState extends State<HomeScreen>
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const EchoFmScreen()),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildQuickAccessCard(
+              icon: Icons.offline_pin,
+              title: '缓存歌曲',
+              subtitle: '离线播放',
+              gradient: const LinearGradient(
+                colors: [Colors.teal, Colors.green],
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CachedMusicScreen()),
                 );
               },
             ),

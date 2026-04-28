@@ -106,6 +106,11 @@ class MusicApi {
     }).toList();
   }
 
+  static Future<List<dynamic>> getCachedMusicList() async {
+    final songs = await _loadCachedMusicList();
+    return _audioCacheService.cachedSongs(songs);
+  }
+
   static Future<List<dynamic>> getMusicList() async {
     if (ApiConstants.useLocalMusicLibrary) {
       return LocalMusicLibrary.loadSongs();

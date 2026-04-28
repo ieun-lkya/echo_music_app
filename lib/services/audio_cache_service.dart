@@ -5,6 +5,20 @@ import 'audio_cache_storage_stub.dart'
     as storage;
 
 class AudioCacheService {
+  Future<List<dynamic>> cachedSongs(List<dynamic> songs) async {
+    final result = <dynamic>[];
+    for (final song in songs) {
+      if (song is Map) {
+        final normalizedSong = Map<String, dynamic>.from(song);
+        final cachedPath = await cachedPathFor(normalizedSong);
+        if (cachedPath != null) {
+          result.add(normalizedSong);
+        }
+      }
+    }
+    return result;
+  }
+
   Future<void> cacheSongs(List<dynamic> songs) async {
     for (final song in songs) {
       if (song is Map) {
